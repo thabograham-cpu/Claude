@@ -1,9 +1,10 @@
 """Shot list for "The Complainer" (voiceover 134.2 s). One entry per shot, timed to the transcript.
 
-cam: (framing, subject, angle)  framing: wide|med|cu|ecu|insert   angle: front|34|side|low|high|top|ots
+cam: (framing, subject, angle)  framing: wide|med|cu|ecu|insert   angle: front|34|side|back|low|high|top|ots
 chars: name -> (set-local x, y, facing degrees [0 = toward -Y], pose)
 card: 2D graphic shot (phone UI, search, map...) - rendered as a card, not 3D
 props: extra prop states for this shot
+move: camera move applied over the shot by tools/camera.py apply() - see MOVES at the bottom
 """
 # characters: INF influencer, CLK clerk (narrator), F1/F2 friends filming, MGR manager, ROACH
 S = []
@@ -26,7 +27,7 @@ shot(12.20, 14.40, "lobby", ("wide", "cart", "34"), {"INF": (1.8, -1.6, -30, "st
 shot(14.40, 16.30, "lobby", ("cu", "INF", "34"), {"INF": (0, 0.6, 0, "snap")}, note="'Desk boy, bags' - snaps fingers")
 shot(16.30, 17.40, "lobby", ("med", "INF", "low"), {"INF": (0, 0.6, 0, "point_up")}, note="'Ninth floor' - points up")
 shot(17.40, 18.80, "lobby", ("med", "elevator", "front"), {"INF": (6.3, 1.3, -90, "selfie"), "F1": (6.3, 0.6, -90, "film"), "F2": (6.3, 2.0, -90, "film")}, note="'Elevators for VIPs' - VIP doors close on them")
-shot(18.80, 21.90, "stairs", ("wide", "CLK", "low"), {"CLK": (0, 1.2, 180, "carry_climb")}, props={"bags_on": "CLK"}, note="Clerk hauls 14 bags up nine floors - floor sign")
+shot(18.80, 21.90, "stairs", ("wide", "CLK", "back"), {"CLK": (0, 1.2, 180, "carry_climb")}, props={"bags_on": "CLK"}, note="Clerk hauls 14 bags up nine floors - floor sign")
 shot(21.90, 24.80, "stairs", ("med", "CLK", "high"), {"CLK": (0, 2.4, 180, "carry_climb")}, props={"bags_on": "CLK"}, card="chat:human luggage cart", note="Live chat overlay: 'human luggage cart'")
 # --- the night ---
 shot(24.80, 26.40, "suite", ("insert", "lobster", "high"), note="Room service: lobster")
@@ -51,7 +52,7 @@ shot(56.20, 58.60, "petstore", ("med", "tank", "front"), note="Pet store tank, p
 shot(58.60, 60.60, None, None, card="story:@influencer story - 9:14 AM", note="His own story from that morning")
 shot(60.60, 64.40, "petstore", ("med", "INF", "low"), {"INF": (0, -1.2, 0, "show_box")}, props={"small_box": "INF"}, note="Him leaving a pet store holding a little box")
 # --- checkout ---
-shot(64.40, 66.80, "lobby", ("wide", "desk", "34"), {"INF": (0, 0.9, 0, "selfie_walk"), "F1": (-1.0, -0.2, 0, "film"), "F2": (1.0, -0.2, 0, "film"), "CLK": (0, 2.6, 0, "stand")}, note="Next morning, he strolls up")
+shot(64.40, 66.80, "lobby", ("wide", "INF", "34"), {"INF": (0, 0.9, 0, "selfie_walk"), "F1": (-1.0, -0.2, 0, "film"), "F2": (1.0, -0.2, 0, "film"), "CLK": (0, 2.6, 0, "stand")}, note="Next morning, he strolls up")
 shot(66.80, 68.40, "lobby", ("cu", "INF", "34"), {"INF": (0, 1.05, 0, "lean_desk")}, note="'Bill's comped, desk boy'")
 shot(68.40, 69.80, "lobby", ("med", "INF", "34"), {"INF": (0, 1.05, 0, "flick")}, note="'Bring my bags down'")
 shot(69.80, 71.40, "lobby", ("cu", "CLK", "front"), {"CLK": (0, 2.6, 0, "slide_bill")}, props={"bill_text": "$4,000"}, note="Calm: 'the bill's back on'")
@@ -81,3 +82,32 @@ shot(124.00, 127.00, "stairs", ("med", "INF", "low"), {"INF": (0, 2.0, 0, "carry
 shot(127.00, 129.10, "lobby", ("insert", "roach_box", "34"), props={"roach_on": "desk"}, note="'And the cockroach? He stayed.'")
 shot(129.10, 132.60, "hall", ("wide", "door404", "low"), props={"roach_on": "hall"}, note="The one room nobody can book")
 shot(132.60, 134.20, "hall", ("cu", "door404", "front"), props={"roach_on": "hall"}, note="ROOM 404")
+
+
+# camera moves (tools/camera.py apply): dolly_in/out, pan_left/right, tilt_up/down, orbit, crane_up/down,
+# zoom_in/out, dolly_zoom, whip_pan, follow; plus fstop/focus/rack_to/rack_at (DoF) and handheld
+MOVES = {
+    3: {"move": "dolly_in", "amount": 0.25},                              # 'His trick?' slow push
+    6: {"move": "dolly_in", "amount": 0.8, "fstop": 2.8, "focus": "INF"},  # they walk in, clerk soft in foreground
+    8: {"move": "crane_up", "amount": 1.2},                               # reveal the 14 suitcases
+    12: {"move": "tilt_up", "amount": 12},                                # look up the stairwell
+    20: {"handheld": 0.8},                                                # fake panic for the stream
+    22: {"move": "zoom_in", "amount": 1.3, "handheld": 1.0},             # manager panics
+    27: {"move": "zoom_in", "amount": 1.8},                               # the hiss
+    33: {"move": "pan_left", "amount": 12},                               # leaving the pet store
+    34: {"move": "dolly_in", "amount": 1.0},                              # he strolls up
+    39: {"handheld": 0.5},                                                # laughing
+    40: {"fstop": 2.0, "focus": "INF", "rack_to": "CLK", "rack_at": 0.7},  # 'cry?' then focus snaps to the clerk
+    41: {"move": "dolly_in", "amount": 0.35},                             # slow push: the thing he didn't expect
+    46: {"move": "dolly_zoom", "amount": 1.8},                            # his face drops (vertigo)
+    47: {"fstop": 2.2, "focus": "INF", "rack_to": "F1", "rack_at": 0.6},  # lawyer on speaker, focus to the filming friend
+    52: {"move": "crane_up", "amount": 0.6},                              # robes reveal
+    55: {"move": "dolly_in", "amount": 0.15},                             # 'Then, I smiled'
+    57: {"move": "zoom_in", "amount": 1.4},                               # doors close in his face
+    58: {"move": "crane_down", "amount": 1.0},                            # carrying down the stairs
+    61: {"move": "dolly_in", "amount": 2.0},                              # down the corridor
+    62: {"move": "zoom_in", "amount": 1.5},                               # ROOM 404
+}
+for _s in S:
+    _s["move"] = MOVES.get(_s["id"])
+assert all(any(x["id"] == k and x["set"] for x in S) for k in MOVES), "moves only on 3D shots"

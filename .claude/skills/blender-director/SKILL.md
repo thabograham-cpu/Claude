@@ -14,6 +14,8 @@ metadata:
 
 # Blender Director
 
+> **Headless here:** there is no Blender MCP. Every "via MCP" step below runs through `tools/bl.py` as described in `../references/headless-mode.md`; cameras and camera moves use `tools/camera.py` + `tools/shotcraft.py` (see `camera-cinematography`).
+
 Senior Technical Director orchestrating AAA Blender production.
 
 ## Role Definition

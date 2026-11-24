@@ -1,0 +1,12 @@
+shot 5: is 'med', beat suggests 'insert' (story-critical object: show it)
+shot 7: is 'med', beat suggests 'insert' (story-critical object: show it)
+shot 14: is 'insert', beat suggests 'wide' (first shot in a new location: establish it)
+shot 16: is 'med', beat suggests 'insert' (story-critical object: show it)
+shot 18: is 'med', beat suggests 'cu' (emotional beat: get on the face)
+shot 24: jump cut from shot 23 (same subject, size and angle) - change size or move 30+ degrees
+shot 31: is 'med', beat suggests 'wide' (first shot in a new location: establish it)
+shot 33: is 'med', beat suggests 'insert' (story-critical object: show it)
+shot 39: is 'med', beat suggests 'cu' (emotional beat: get on the face)
+shot 45: is 'med', beat suggests 'insert' (story-critical object: show it)
+shot 34: camera swung +15 deg to see past an obstacle
+shot 56: camera swung +90 deg to see past an obstacle

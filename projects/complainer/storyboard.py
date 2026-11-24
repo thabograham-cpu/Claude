@@ -5,7 +5,8 @@ import sys, os, math, bpy
 from mathutils import Vector, Matrix
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [HERE, os.path.join(HERE, "..", "..", "tools")]
-import cast
+import json
+import cast, camera as C, shotcraft as SC
 from shots import S
 
 OUT = os.path.join(HERE, "storyboard", "raw"); os.makedirs(OUT, exist_ok=True)
@@ -263,19 +264,23 @@ sh = sc.display.shading
 sh.light = "STUDIO"; sh.color_type = "MATERIAL"; sh.show_shadows = True; sh.show_cavity = True
 sh.cavity_type = "BOTH"; sh.background_type = "WORLD"
 w = bpy.data.worlds.new("W"); sc.world = w
-cam = bpy.data.objects.new("CAM", bpy.data.cameras.new("CAM")); sc.collection.objects.link(cam); sc.camera = cam
-cam.data.sensor_fit = "VERTICAL"; cam.data.clip_start = 0.02
-FR = {"wide": (4.8, 20), "med": (2.3, 30), "cu": (1.1, 38), "ecu": (0.75, 45), "insert": (0.9, 40)}
-BOUNDS = {"lobby": ((-6.6, 6.6), (-6.6, 4.7), (0.45, 4.5)), "stairs": ((-0.7, 0.7), (-1.5, 6.0), (0.45, 6.5)),
-          "suite": ((-3.8, 3.8), (-3.8, 2.8), (0.45, 3.0)), "petstore": ((-5, 5), (-6, 1.2), (0.45, 5)),
-          "hall": ((-1.35, 1.35), (-4.8, 3.8), (0.45, 2.6))}
+sh.use_dof = True  # Workbench shows camera depth of field
+LENS = {"wide": 20, "med": 30, "cu": 40, "ecu": 50, "insert": 40}
+ANGLE = {"34": 35, "side": 90, "back": 180}
 SKY = {"lobby": "3a2a20", "stairs": "202020", "suite": "0b1022", "petstore": "8ab4d8", "hall": "1b1b1b"}
+WORDS = json.load(open(os.path.join(HERE, "audio", "words.json")))
+FPS = 24
 
 
 def place_prop(name, where, o):
     OBJ[name].location = (where[0] + o[0], where[1] + o[1], 0)
 
 
+def names_of(ob):
+    return {ob.name} | {c.name for c in ob.children_recursive}
+
+
+records, seen_sets = [], set()
 for s in S:
     if s["card"] and not s["set"]:
         continue
@@ -303,7 +308,7 @@ for s in S:
     # hand props
     for n, (_, _, _, p) in s["chars"].items():
         if p.startswith(("selfie", "film", "phone")):
-            OBJ["phone"].location = hand(RIGS[n]) if n != "F2" else hand(RIGS[n])
+            OBJ["phone"].location = hand(RIGS[n])
     if s["props"].get("small_box"): OBJ["small_box"].location = hand(RIGS[s["props"]["small_box"]])
     bo = s["props"].get("bags_on")
     bags = []
@@ -319,45 +324,62 @@ for s in S:
     if roach_on == "desk":
         OBJ["roach_box"].location = (o[0] - 0.3, o[1] + 1.75, 1.16); OBJ["roach"].location = (o[0] - 0.3, o[1] + 1.75, 1.3)
     if roach_on == "hall": OBJ["roach"].location = (o[0], o[1] + 3.2, 0.0)
-    # camera
     bpy.context.view_layer.update()
-    framing, subj, angle = s["cam"]
+
+    # ---- camera: shotcraft placement + camera.py rig/move
+    framing, subj, angle = s["cam"]; lens = LENS[framing]; hd = None
     if subj in RIGS:
-        r = RIGS[subj]; hd = head(r)
-        tgt = hd + Vector((0, 0, -0.05)) if framing in ("cu", "ecu") else (Vector((hd.x, hd.y, hd.z * 0.72)) if framing == "med" else Vector((hd.x, hd.y, 1.1)))
-        front = Vector((0, -1, 0)); front.rotate(r.rotation_euler) if subj and s["chars"][subj][3] != "lie_bed" else None
-        if s["chars"][subj][3] == "lie_bed": front = Vector((0, -1, 0)); tgt = hd
+        r = RIGS[subj]; hd = head(r); ignore = names_of(r)
+        lying = s["chars"][subj][3] == "lie_bed"
+        front = Vector((0, -1, 0)) if lying else (Matrix.Rotation(r.rotation_euler.z, 3, "Z") @ Vector((0, -1, 0)))
+        subject_pt = Vector((hd.x, hd.y, 1.1)) if framing == "wide" else hd
+        dist = SC.distance_for(framing, lens)
     else:
-        ob = OBJ[subj]
-        if ob.type == "EMPTY":
-            kids = [c for c in ob.children if c.type in ("MESH", "FONT")]
-            pts = [c.matrix_world @ Vector(v) for c in kids for v in c.bound_box]
-        else:
-            pts = [ob.matrix_world @ Vector(v) for v in ob.bound_box]
-        tgt = sum(pts, Vector()) / len(pts); front = Vector((0, -1, 0))
-        txt = [c for c in ob.children if c.type == "FONT"] if ob.type == "EMPTY" else []
-        if txt and framing in ("cu", "insert"): tgt = txt[0].matrix_world.translation.copy()
-        if subj == "desk": tgt.z = 1.15
-        if subj == "elevator": front = Vector((-1, 0, 0)); tgt.z = 1.4
-    dist, lens = FR[framing]
-    d = front.copy()
-    if angle == "34": d.rotate(Matrix.Rotation(math.radians(35), 3, "Z"))
-    if angle == "side": d.rotate(Matrix.Rotation(math.radians(90), 3, "Z"))
-    up = {"low": -0.45, "high": 0.9, "top": 3.0}.get(angle, 0.05) * (dist if framing != "wide" else 0.5)
-    pos = tgt + d * dist + Vector((0, 0, up))
-    if angle == "top": pos = tgt + Vector((0, -0.05, dist + 0.6))
-    if angle == "ots":
-        r = RIGS["CLK"]; back = Vector((0, 1, 0)); back.rotate(r.rotation_euler)
-        pos = head(r) + back * 0.9 + Vector((0.35, 0, 0.2))
-        other = RIGS["INF"] if subj == "CLK" else RIGS[subj]
-        tgt = head(other) - Vector((0, 0, 0.4 if framing == "wide" else 0.1))
-    if framing == "wide" and angle == "low": pos.z = 0.8
-    (x0, x1), (y0, y1), (z0, z1) = BOUNDS[set_]
-    pos = Vector((min(max(pos.x - o[0], x0), x1) + o[0], min(max(pos.y - o[1], y0), y1) + o[1], min(max(pos.z, z0), z1)))
-    if set_ == "stairs": pos.z = max(pos.z, max(0.0, pos.y - o[1]) * 0.6 + 0.6)  # stay above the steps
-    cam.location = pos; cam.data.lens = lens
-    cam.rotation_euler = (tgt - pos).to_track_quat("-Z", "Y").to_euler()
-    sc.render.filepath = os.path.join(OUT, f"shot_{s['id']:02d}.png")
-    bpy.ops.render.render(write_still=True)
+        ob = OBJ[subj]; ignore = names_of(ob)
+        kids = [c for c in ob.children if c.type in ("MESH", "FONT")] if ob.type == "EMPTY" else [ob]
+        pts = [c.matrix_world @ Vector(v) for c in kids for v in c.bound_box]
+        subject_pt = sum(pts, Vector()) / len(pts); front = Vector((0, -1, 0))
+        ext = max((max(p[i] for p in pts) - min(p[i] for p in pts)) for i in range(3))
+        txt = [c for c in kids if c.type == "FONT"]
+        if txt and framing in ("cu", "insert"): subject_pt = txt[0].matrix_world.translation.copy()
+        if subj == "desk": subject_pt.z = 1.15
+        if subj == "elevator": front = Vector((-1, 0, 0)); subject_pt.z = 1.4
+        dist = SC.distance_for(framing, lens) if framing == "wide" else SC.distance_for(None, lens, height=max(0.35, ext * 1.6))
+    height = {"low": -0.45, "high": 0.9}.get(angle, 0.05) * (dist if framing != "wide" else 0.5)
+    if angle == "top":
+        pos = subject_pt + Vector((0, -0.05, dist + 0.6)); info = {"clear": 1.0, "swung": 0}
+    elif angle == "ots":  # over the clerk's shoulder toward the other character
+        rc = RIGS["CLK"]; back = Matrix.Rotation(rc.rotation_euler.z, 3, "Z") @ Vector((0, 1, 0))
+        pos = head(rc) + back * 0.9 + Vector((0.35, 0, 0.2)); info = {"clear": 1.0, "swung": 0}
+        other = RIGS["INF"] if subj == "CLK" else RIGS[subj]; hd = head(other)
+        subject_pt = hd - Vector((0, 0, 0.4 if framing == "wide" else 0.1))
+    else:
+        pos, info = SC.place(subject_pt, front, dist, ANGLE.get(angle, 0), height, ignore=ignore)
+    pos.z = max(pos.z, 0.35)
+    aim_pt = SC.aim_point(hd, framing, pos, lens) if (hd is not None and framing in SC.EYE_LINE and angle != "ots") else subject_pt
+    rg = C.rig(f"S{s['id']:02d}", pos, aim_pt, lens); sc.camera = rg.cam
+    n_frames = max(2, round((s["t1"] - s["t0"]) * FPS))
+    if s.get("move"):
+        C.apply(rg, s["move"], 1, n_frames, {n: (RIGS[n], "head") for n in RIGS})
+    sc.frame_set(1)
+    sc.render.filepath = os.path.join(OUT, f"shot_{s['id']:02d}.png"); bpy.ops.render.render(write_still=True)
+    if s.get("move"):
+        sc.frame_set(n_frames)
+        sc.render.filepath = os.path.join(OUT, f"shot_{s['id']:02d}_end.png"); bpy.ops.render.render(write_still=True)
+        sc.frame_set(1)
+    eye = SC.on_screen(rg.cam, hd)[1] if hd is not None else True
+    text = " ".join(x["w"] for x in WORDS if x["s"] < s["t1"] and x["e"] > s["t0"]) + " " + s["note"]
+    records.append(dict(id=s["id"], set=set_, t0=s["t0"], t1=s["t1"], size=framing, subject=subj, cam=pos.copy(), aim=aim_pt.copy(),
+                        chars={n: Vector(RIGS[n].location) for n in s["chars"]}, text=text, first_in_scene=set_ not in seen_sets,
+                        clear=info["clear"], swung=info["swung"], eye_visible=eye))
+    seen_sets.add(set_)
+    for ob_ in (rg.cam, rg.target, rg.focus): bpy.data.objects.remove(ob_)
     for b in bags: bpy.data.objects.remove(b)
-    print("SHOT", s["id"], "done")
+    print("SHOT", s["id"], "done", info)
+
+# ---- review report
+notes = SC.lint(records)
+notes += [f"shot {r['id']}: camera swung {r['swung']:+.0f} deg to see past an obstacle" for r in records if r["swung"]]
+notes += [f"shot {r['id']}: subject's head is out of frame" for r in records if not r["eye_visible"]]
+open(os.path.join(HERE, "storyboard", "lint.txt"), "w").write("\n".join(notes) + "\n")
+print("LINT", len(notes), "notes")

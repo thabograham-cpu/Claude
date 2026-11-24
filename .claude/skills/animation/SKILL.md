@@ -1,6 +1,6 @@
 ---
 name: animation
-description: Game-ready animation in Blender including walk/run/idle cycles, combat, mechanical animation, camera animation, constraints, Graph Editor, and NLA workflows via MCP.
+description: Game-ready animation in Blender including walk/run/idle cycles, combat, mechanical animation, constraints, Graph Editor, and NLA workflows via MCP.
 license: MIT
 metadata:
   author: https://github.com/arjun988
@@ -10,6 +10,8 @@ metadata:
   triggers: animation, animate, walk cycle, run cycle, idle, combat, NLA, graph editor, keyframe
   related-skills: rigging, blender-modeler, export-pipeline
 ---
+
+> Camera moves (dolly, pan, zoom, rack focus, paths, handheld) belong to `camera-cinematography` / `tools/camera.py`; this skill covers character and object motion.
 
 # Animation
 

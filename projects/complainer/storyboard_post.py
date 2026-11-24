@@ -42,7 +42,9 @@ def dt(textfile, x, y, size, color="white", box=True):
 
 for s in S:
     i = s["id"]; src = os.path.join(RAW, f"shot_{i:02d}.png"); out = os.path.join(FIN, f"shot_{i:02d}.png")
-    head = tf(f"{i}_h.txt", f"{i:02d}  {s['t0']:.1f}-{s['t1']:.1f}s")
+    mv = s.get("move") or {}
+    tag = mv.get("move") or ("rack focus" if "rack_to" in mv else ("handheld" if mv.get("handheld") else ""))
+    head = tf(f"{i}_h.txt", f"{i:02d}  {s['t0']:.1f}-{s['t1']:.1f}s" + (f"  [{tag}]" if tag else ""))
     note = tf(f"{i}_n.txt", wrap(s["note"], 30))
     vo = tf(f"{i}_v.txt", wrap(words(s["t0"], s["t1"]).upper(), 20))
     filters = [dt(head, 8, 8, 12, "yellow"), dt(vo, "(w-tw)/2", "h*0.64", 13, "0xFF9A3C"), dt(note, 8, "h-th-10", 10)]
@@ -58,25 +60,38 @@ for s in S:
             ff("-f", "lavfi", "-i", f"color=c=0x15151f:s={W}x{H}", "-frames:v", "1", "-vf", ",".join(cf + filters), out)
     else:
         ff("-i", src, "-vf", ",".join(filters), out)
+    end = os.path.join(RAW, f"shot_{i:02d}_end.png")
+    if os.path.exists(end):  # last frame of a camera move
+        eh = tf(f"{i}_e.txt", f"{i:02d}  END  [{tag}]")
+        ff("-i", end, "-vf", ",".join([dt(eh, 8, 8, 12, "0x7CFC00")] + filters[1:]), os.path.join(FIN, f"shot_{i:02d}_end.png"))
 
 # contact-sheet pages: 6 x 2 per page
-shots = [os.path.join(FIN, f"shot_{s['id']:02d}.png") for s in S]
-for p in range(0, len(shots), 12):
-    page = shots[p:p + 12]; n = len(page)
-    ins = [a for f in page for a in ("-i", f)]
-    fc = "".join(f"[{k}:v]scale=240:-1[v{k}];" for k in range(n))
-    lay = "|".join(f"{(k % 6) * 244}_{(k // 6) * 431}" for k in range(n))
-    ff(*ins, "-filter_complex", fc + "".join(f"[v{k}]" for k in range(n)) + f"xstack=inputs={n}:layout={lay}:fill=gray",
-       "-frames:v", "1", os.path.join(SB, f"page_{p // 12 + 1:02d}.png"))
+def pages(files, prefix):
+    for p in range(0, len(files), 12):
+        page = files[p:p + 12]; n = len(page)
+        ins = [a for f in page for a in ("-i", f)]
+        fc = "".join(f"[{k}:v]scale=240:-1[v{k}];" for k in range(n))
+        lay = "|".join(f"{(k % 6) * 244}_{(k // 6) * 431}" for k in range(n))
+        ff(*ins, "-filter_complex", fc + "".join(f"[v{k}]" for k in range(n)) + f"xstack=inputs={n}:layout={lay}:fill=gray",
+           "-frames:v", "1", os.path.join(SB, f"{prefix}_{p // 12 + 1:02d}.png"))
+
+
+for old in os.listdir(SB):
+    if old.endswith(".png") and old.startswith(("page_", "moves_")): os.remove(os.path.join(SB, old))
+pages([os.path.join(FIN, f"shot_{s['id']:02d}.png") for s in S], "page")
+moving = [s for s in S if os.path.exists(os.path.join(FIN, f"shot_{s['id']:02d}_end.png"))]
+pages([os.path.join(FIN, f"shot_{s['id']:02d}{e}.png") for s in moving for e in ("", "_end")], "moves")  # start | end pairs
 
 # animatic: each still held for its shot duration, under the voiceover
 lst = os.path.join(SB, "animatic.txt")
 with open(lst, "w") as f:
     for s in S:
-        f.write(f"file '{os.path.join(FIN, f'shot_{s['id']:02d}.png')}'\nduration {s['t1'] - s['t0']:.3f}\n")
+        a, e, d = os.path.join(FIN, f"shot_{s['id']:02d}.png"), os.path.join(FIN, f"shot_{s['id']:02d}_end.png"), s["t1"] - s["t0"]
+        if os.path.exists(e): f.write(f"file '{a}'\nduration {d / 2:.3f}\nfile '{e}'\nduration {d / 2:.3f}\n")
+        else: f.write(f"file '{a}'\nduration {d:.3f}\n")
     f.write(f"file '{os.path.join(FIN, f'shot_{S[-1]['id']:02d}.png')}'\n")
 ff("-f", "concat", "-safe", "0", "-i", lst, "-i", os.path.join(HERE, "audio", "voiceover.mp3"), "-vf", "fps=24,format=yuv420p",
    "-c:v", "libx264", "-crf", "20", "-c:a", "aac", "-shortest", os.path.join(SB, "animatic.mp4"))
 
-assert len(os.listdir(FIN)) == len(S), "every shot needs a final still"
+assert all(os.path.exists(os.path.join(FIN, f"shot_{s['id']:02d}.png")) for s in S), "every shot needs a final still"
 print("storyboard done:", len(S), "shots")
