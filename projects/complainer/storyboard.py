@@ -7,7 +7,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [HERE, os.path.join(HERE, "..", "..", "tools")]
 import json
 import cast, camera as C, shotcraft as SC
-from shots import S
+from shots import S, LINT_OK
 
 OUT = os.path.join(HERE, "storyboard", "raw"); os.makedirs(OUT, exist_ok=True)
 sc = bpy.context.scene
@@ -336,6 +336,8 @@ for s in S:
         dist = SC.distance_for(framing, lens)
     else:
         ob = OBJ[subj]; ignore = names_of(ob)
+        holder = s["props"].get(subj)  # a held prop: its holder's arm is not an obstacle
+        if isinstance(holder, str) and holder in RIGS: ignore |= names_of(RIGS[holder])
         kids = [c for c in ob.children if c.type in ("MESH", "FONT")] if ob.type == "EMPTY" else [ob]
         pts = [c.matrix_world @ Vector(v) for c in kids for v in c.bound_box]
         subject_pt = sum(pts, Vector()) / len(pts); front = Vector((0, -1, 0))
@@ -368,7 +370,7 @@ for s in S:
         sc.render.filepath = os.path.join(OUT, f"shot_{s['id']:02d}_end.png"); bpy.ops.render.render(write_still=True)
         sc.frame_set(1)
     eye = SC.on_screen(rg.cam, hd)[1] if hd is not None else True
-    text = " ".join(x["w"] for x in WORDS if x["s"] < s["t1"] and x["e"] > s["t0"]) + " " + s["note"]
+    text = " ".join(x["w"] for x in WORDS if s["t0"] <= (x["s"] + x["e"]) / 2 < s["t1"]) + " " + s["note"]  # words spoken IN the shot
     records.append(dict(id=s["id"], set=set_, t0=s["t0"], t1=s["t1"], size=framing, subject=subj, cam=pos.copy(), aim=aim_pt.copy(),
                         chars={n: Vector(RIGS[n].location) for n in s["chars"]}, text=text, first_in_scene=set_ not in seen_sets,
                         clear=info["clear"], swung=info["swung"], eye_visible=eye))
@@ -381,5 +383,7 @@ for s in S:
 notes = SC.lint(records)
 notes += [f"shot {r['id']}: camera swung {r['swung']:+.0f} deg to see past an obstacle" for r in records if r["swung"]]
 notes += [f"shot {r['id']}: subject's head is out of frame" for r in records if not r["eye_visible"]]
-open(os.path.join(HERE, "storyboard", "lint.txt"), "w").write("\n".join(notes) + "\n")
+is_ok = lambda n: any(n.startswith(f"shot {k}:") for k in LINT_OK)
+report = [n for n in notes if not is_ok(n)] + [f"accepted: shot {k}: {why}" for k, why in LINT_OK.items()]
+open(os.path.join(HERE, "storyboard", "lint.txt"), "w").write("\n".join(report) + "\n")
 print("LINT", len(notes), "notes")

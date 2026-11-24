@@ -74,7 +74,7 @@ def side_of_line(a, b, p):
 
 # ---------------------------------------------------------------- shot-size suggestion + lint
 REACT = ("smile", "laugh", "panic", "scream", "cry", "shock", "drop", "smirk", "grin", "yell")
-DETAIL = ("$", "bill", "box", "card", "clock", "lobster", "roach", "cockroach", "book", "tag", "plaque", "404", "champagne", "phone")
+DETAIL = ("$", "bill", "box", "card", "clock", "lobster", "roach", "cockroach", "book", "tag", "plaque", "404", "champagne")  # not "phone": it is in almost every shot
 PLACE = ("walk", "lobby", "stroll", "enter", "carried", "floors", "stairs", "street", "store", "hall")
 
 

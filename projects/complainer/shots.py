@@ -19,7 +19,7 @@ shot(0.00, 2.00, "lobby", ("wide", "INF", "low"), {"INF": (0, -3.5, 0, "selfie_w
 shot(2.00, 3.50, "lobby", ("cu", "INF", "34"), {"INF": (0, -3.5, 0, "selfie")}, note="Smug to his own camera: 'for free'")
 shot(3.50, 4.90, "lobby", ("ecu", "INF", "front"), {"INF": (0, -3.5, 0, "selfie")}, note="'His trick?' - slow push, smirk")
 shot(4.90, 6.20, "lobby", ("med", "INF", "34"), {"INF": (0, -3.5, 0, "point_fwd"), "F1": (-0.9, -4.4, 20, "film")}, note="Points at a 'problem' while being filmed")
-shot(6.20, 8.30, "lobby", ("med", "INF", "low"), {"INF": (0, -3.5, 0, "show_box")}, props={"small_box": "INF"}, note="'...he brings one' - pulls a little box from his pocket")
+shot(6.20, 8.30, "lobby", ("insert", "small_box", "34"), {"INF": (0, -3.5, 0, "show_box")}, props={"small_box": "INF"}, note="'...he brings one' - pulls a little box from his pocket")
 # --- arrival ---
 shot(8.30, 10.60, "lobby", ("wide", "CLK", "ots"), {"CLK": (0, 2.6, 0, "stand"), "INF": (0, -2.5, 0, "selfie_walk"), "F1": (-1.2, -3.4, 0, "film"), "F2": (1.2, -3.4, 0, "film")}, note="Over the clerk's shoulder: they walk in livestreaming")
 shot(10.60, 12.20, "lobby", ("med", "F1", "front"), {"F1": (-0.6, -2.5, 0, "film_walk"), "F2": (0.6, -2.7, 0, "film_walk")}, note="Two friends, phones up")
@@ -30,17 +30,17 @@ shot(17.40, 18.80, "lobby", ("med", "elevator", "front"), {"INF": (6.3, 1.3, -90
 shot(18.80, 21.90, "stairs", ("wide", "CLK", "back"), {"CLK": (0, 1.2, 180, "carry_climb")}, props={"bags_on": "CLK"}, note="Clerk hauls 14 bags up nine floors - floor sign")
 shot(21.90, 24.80, "stairs", ("med", "CLK", "high"), {"CLK": (0, 2.4, 180, "carry_climb")}, props={"bags_on": "CLK"}, card="chat:human luggage cart", note="Live chat overlay: 'human luggage cart'")
 # --- the night ---
-shot(24.80, 26.40, "suite", ("insert", "lobster", "high"), note="Room service: lobster")
+shot(24.80, 26.40, "suite", ("wide", "lobster", "34"), note="Room service: the suite, lobster on the cart")
 shot(26.40, 27.40, "suite", ("insert", "champagne", "34"), note="Champagne")
 shot(27.40, 28.80, "suite", ("med", "INF", "34"), {"INF": (0.4, 0.3, 200, "lie_bed")}, note="Spa robe, face mask, on the bed")
 shot(28.80, 30.20, "suite", ("insert", "clock", "front"), note="Clock 2:00 AM")
-shot(30.20, 31.40, "lobby", ("med", "CLK", "front"), {"CLK": (0, 2.6, 0, "phone_ear")}, note="Desk phone - screaming on the line")
+shot(30.20, 31.40, "lobby", ("cu", "CLK", "front"), {"CLK": (0, 2.6, 0, "phone_ear")}, note="Desk phone - screaming on the line")
 shot(31.40, 33.90, "suite", ("ecu", "lobster", "34"), props={"roach_on": "lobster"}, note="A cockroach in the lobster")
 shot(33.90, 35.50, "suite", ("med", "INF", "front"), {"INF": (0, -0.8, 0, "shocked"), "F1": (-1.0, -1.6, 20, "film")}, note="Performs horror for the stream")
 shot(35.50, 37.60, None, None, card="viewers:300,000 watching", note="Viewer counter ticks to 300K")
 shot(37.60, 39.60, "lobby", ("cu", "MGR", "34"), {"MGR": (0.8, 2.6, 0, "hands_head")}, note="Manager panics")
 shot(39.60, 41.40, "lobby", ("insert", "bill", "high"), props={"stamp": "COMPED"}, note="COMPED stamp on the bill")
-shot(41.40, 42.90, "lobby", ("insert", "bill", "high"), props={"stamp": "COMPED", "bill_text": "$4,000"}, note="'$4,000, gone'")
+shot(41.40, 42.90, "lobby", ("insert", "bill", "top"), props={"stamp": "COMPED", "bill_text": "$4,000"}, note="'$4,000, gone'")
 # --- the investigation ---
 shot(42.90, 44.80, "lobby", ("med", "CLK", "34"), {"CLK": (0, 2.6, 0, "phone_look")}, note="Night shift: rewatching the stream")
 shot(44.80, 47.00, None, None, card="replay:that cockroach = 3 inches", note="Freeze-frame on the stream: roach next to a ruler")
@@ -48,22 +48,22 @@ shot(47.00, 49.00, "suite", ("ecu", "roach", "front"), props={"roach_on": "lobst
 shot(49.00, 50.60, None, None, card="search:cockroach that hisses", note="Search bar typing")
 shot(50.60, 52.60, None, None, card="result:Madagascar hissing cockroach", note="Search result card")
 shot(52.60, 56.20, None, None, card="map:Madagascar", note="Globe spins, zooms to an island far away")
-shot(56.20, 58.60, "petstore", ("med", "tank", "front"), note="Pet store tank, price tag")
+shot(56.20, 58.60, "petstore", ("wide", "tank", "front"), note="Pet store tank, price tag")
 shot(58.60, 60.60, None, None, card="story:@influencer story - 9:14 AM", note="His own story from that morning")
 shot(60.60, 64.40, "petstore", ("med", "INF", "low"), {"INF": (0, -1.2, 0, "show_box")}, props={"small_box": "INF"}, note="Him leaving a pet store holding a little box")
 # --- checkout ---
-shot(64.40, 66.80, "lobby", ("wide", "INF", "34"), {"INF": (0, 0.9, 0, "selfie_walk"), "F1": (-1.0, -0.2, 0, "film"), "F2": (1.0, -0.2, 0, "film"), "CLK": (0, 2.6, 0, "stand")}, note="Next morning, he strolls up")
+shot(64.40, 66.80, "lobby", ("wide", "INF", "side"), {"INF": (0, 0.9, 0, "selfie_walk"), "F1": (-1.0, -0.2, 0, "film"), "F2": (1.0, -0.2, 0, "film"), "CLK": (0, 2.6, 0, "stand")}, note="Next morning, he strolls up")
 shot(66.80, 68.40, "lobby", ("cu", "INF", "34"), {"INF": (0, 1.05, 0, "lean_desk")}, note="'Bill's comped, desk boy'")
 shot(68.40, 69.80, "lobby", ("med", "INF", "34"), {"INF": (0, 1.05, 0, "flick")}, note="'Bring my bags down'")
 shot(69.80, 71.40, "lobby", ("cu", "CLK", "front"), {"CLK": (0, 2.6, 0, "slide_bill")}, props={"bill_text": "$4,000"}, note="Calm: 'the bill's back on'")
 shot(71.40, 73.40, "lobby", ("insert", "bill", "high"), props={"bill_text": "$4,000"}, note="$4,000")
-shot(73.40, 76.40, "lobby", ("med", "INF", "low"), {"INF": (0, 1.05, 0, "laugh")}, note="Laughs: 'I'm leaving without paying'")
+shot(73.40, 76.40, "lobby", ("cu", "INF", "low"), {"INF": (0, 1.05, 0, "laugh")}, note="Laughs: 'I'm leaving without paying'")
 shot(76.40, 78.20, "lobby", ("cu", "INF", "ots"), {"INF": (0, 1.1, 0, "lean_desk"), "CLK": (0, 2.6, 0, "stand")}, note="'What are you gonna do, cry?'")
 shot(78.20, 81.40, "lobby", ("cu", "CLK", "front"), {"CLK": (0, 2.6, 0, "stand")}, note="Slow push in: the one thing he didn't expect")
 shot(81.40, 83.00, "lobby", ("wide", "cart", "34"), {"CLK": (-1.6, 3.2, 0, "push")}, props={"cart": (-0.4, 3.6)}, note="Rolls the bags behind the desk")
 shot(83.00, 84.80, "lobby", ("insert", "lawbook", "high"), note="An old law book thuds on the desk")
 shot(84.80, 86.60, None, None, card="title:THE INNKEEPER'S LIEN", note="Title card")
-shot(86.60, 89.60, "lobby", ("med", "cart", "front"), props={"cart": (-0.4, 3.6), "tag": "HELD"}, note="Bags tagged HELD")
+shot(86.60, 89.60, "lobby", ("insert", "cart", "front"), props={"cart": (-0.4, 3.6), "tag": "HELD"}, note="Bags tagged HELD")
 shot(89.60, 93.00, "lobby", ("cu", "INF", "front"), {"INF": (0, 1.05, 0, "shocked")}, props={"tag": "FOR SALE"}, note="'...it can sell it' - his face drops")
 # --- meltdown ---
 shot(93.00, 96.00, "lobby", ("med", "INF", "34"), {"INF": (0, 0.6, 0, "phone_speaker"), "F1": (-1.0, -0.4, 20, "film"), "F2": (1.0, -0.4, -20, "film")}, note="Calls his lawyer on speaker, live")
@@ -75,7 +75,7 @@ shot(106.80, 110.80, "lobby", ("insert", "open_case", "top"), props={"open_case"
 shot(110.80, 113.60, None, None, card="chat:@GrandPalace: that's OUR robe", note="Hotels flood the chat")
 shot(113.60, 115.40, "lobby", ("insert", "desk", "high"), {"INF": (0, 1.05, 0, "pay")}, note="He slaps down the card. Paid.")
 shot(115.40, 117.00, "lobby", ("ecu", "CLK", "front"), {"CLK": (0, 2.6, 0, "stand")}, note="'Then, I smiled.'")
-shot(117.00, 118.60, "lobby", ("med", "CLK", "low"), {"CLK": (0, 2.6, 0, "point_up")}, note="'Bags are on the ninth floor'")
+shot(117.00, 118.60, "lobby", ("med", "CLK", "front"), {"CLK": (0, 2.6, 0, "point_up")}, note="'Bags are on the ninth floor'")
 shot(118.60, 120.40, "lobby", ("med", "elevator", "front"), {"INF": (6.3, 1.3, -90, "shocked")}, note="VIP doors close in his face (callback)")
 shot(120.40, 124.00, "stairs", ("wide", "INF", "high"), {"INF": (0, 1.05, 0, "carry_climb")}, props={"bags_on": "INF"}, note="He carries all 14 down nine floors, live")
 shot(124.00, 127.00, "stairs", ("med", "INF", "low"), {"INF": (0, 2.0, 0, "carry_climb")}, props={"bags_on": "INF"}, card="chat:human luggage cart", note="Chat: now HE's the luggage cart")
@@ -111,3 +111,8 @@ MOVES = {
 for _s in S:
     _s["move"] = MOVES.get(_s["id"])
 assert all(any(x["id"] == k and x["set"] for x in S) for k in MOVES), "moves only on 3D shots"
+
+# lint notes accepted on purpose (shot id -> reason); storyboard.py reports them as accepted, not as warnings
+LINT_OK = {
+    33: "medium keeps his face AND the box in one frame - the story needs both",
+}
