@@ -10,3 +10,9 @@ node_modules/
 *.blend1
 frames/
 frames_*/
+projects/*/storyboard/raw/
+projects/*/storyboard/final/
+projects/*/storyboard/txt/
+projects/*/storyboard/check/
+projects/*/storyboard/animatic.txt
+__pycache__/
