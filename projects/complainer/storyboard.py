@@ -257,6 +257,54 @@ def head(rig):
     bpy.context.view_layer.update(); return rig.matrix_world @ rig.pose.bones["head"].head
 
 
+LENS = {"wide": 20, "med": 30, "cu": 40, "ecu": 50, "insert": 40}
+ANGLE = {"34": 35, "side": 90, "back": 180}
+
+
+def names_of(ob):
+    return {ob.name} | {c.name for c in ob.children_recursive}
+
+
+def shot_camera(s, f0, f1):
+    """shotcraft placement + camera.py rig/move for one shot; pose the scene for frame f0 first."""
+    framing, subj, angle = s["cam"]; lens = LENS[framing]; hd = None
+    if subj in RIGS:
+        r = RIGS[subj]; hd = head(r); ignore = names_of(r)
+        lying = s["chars"][subj][3] == "lie_bed"
+        front = Vector((0, -1, 0)) if lying else (Matrix.Rotation(r.rotation_euler.z, 3, "Z") @ Vector((0, -1, 0)))
+        subject_pt = Vector((hd.x, hd.y, 1.1)) if framing == "wide" else hd
+        dist = SC.distance_for(framing, lens)
+    else:
+        ob = OBJ[subj]; ignore = names_of(ob)
+        holder = s["props"].get(subj)  # a held prop: its holder's arm is not an obstacle
+        if isinstance(holder, str) and holder in RIGS: ignore |= names_of(RIGS[holder])
+        kids = [c for c in ob.children if c.type in ("MESH", "FONT")] if ob.type == "EMPTY" else [ob]
+        pts = [c.matrix_world @ Vector(v) for c in kids for v in c.bound_box]
+        subject_pt = sum(pts, Vector()) / len(pts); front = Vector((0, -1, 0))
+        ext = max((max(p[i] for p in pts) - min(p[i] for p in pts)) for i in range(3))
+        txt = [c for c in kids if c.type == "FONT"]
+        if txt and framing in ("cu", "insert"): subject_pt = txt[0].matrix_world.translation.copy()
+        if subj == "desk": subject_pt.z = 1.15
+        if subj == "elevator": front = Vector((-1, 0, 0)); subject_pt.z = 1.4
+        dist = SC.distance_for(framing, lens) if framing == "wide" else SC.distance_for(None, lens, height=max(0.35, ext * 1.6))
+    height = {"low": -0.45, "high": 0.9}.get(angle, 0.05) * (dist if framing != "wide" else 0.5)
+    if angle == "top":
+        pos = subject_pt + Vector((0, -0.05, dist + 0.6)); info = {"clear": 1.0, "swung": 0}
+    elif angle == "ots":  # over the clerk's shoulder toward the other character
+        rc = RIGS["CLK"]; back = Matrix.Rotation(rc.rotation_euler.z, 3, "Z") @ Vector((0, 1, 0))
+        pos = head(rc) + back * 0.9 + Vector((0.35, 0, 0.2)); info = {"clear": 1.0, "swung": 0}
+        other = RIGS["INF"] if subj == "CLK" else RIGS[subj]; hd = head(other)
+        subject_pt = hd - Vector((0, 0, 0.4 if framing == "wide" else 0.1))
+    else:
+        pos, info = SC.place(subject_pt, front, dist, ANGLE.get(angle, 0), height, ignore=ignore)
+    pos.z = max(pos.z, 0.35)
+    aim_pt = SC.aim_point(hd, framing, pos, lens) if (hd is not None and framing in SC.EYE_LINE and angle != "ots") else subject_pt
+    rg = C.rig(f"S{s['id']:02d}", pos, aim_pt, lens); sc.camera = rg.cam
+    if s.get("move"):
+        C.apply(rg, s["move"], f0, f1, {n: (RIGS[n], "head") for n in RIGS})
+    return rg, pos, aim_pt, hd, info
+
+
 # ============================ render setup ============================
 def render_storyboard():
     sc.render.engine = "BLENDER_WORKBENCH"
@@ -266,8 +314,6 @@ def render_storyboard():
     sh.cavity_type = "BOTH"; sh.background_type = "WORLD"
     w = bpy.data.worlds.new("W"); sc.world = w
     sh.use_dof = True  # Workbench shows camera depth of field
-    LENS = {"wide": 20, "med": 30, "cu": 40, "ecu": 50, "insert": 40}
-    ANGLE = {"34": 35, "side": 90, "back": 180}
     SKY = {"lobby": "3a2a20", "stairs": "202020", "suite": "0b1022", "petstore": "8ab4d8", "hall": "1b1b1b"}
     WORDS = json.load(open(os.path.join(HERE, "audio", "words.json")))
     FPS = 24
@@ -275,10 +321,6 @@ def render_storyboard():
 
     def place_prop(name, where, o):
         OBJ[name].location = (where[0] + o[0], where[1] + o[1], 0)
-
-
-    def names_of(ob):
-        return {ob.name} | {c.name for c in ob.children_recursive}
 
 
     records, seen_sets = [], set()
@@ -327,43 +369,8 @@ def render_storyboard():
         if roach_on == "hall": OBJ["roach"].location = (o[0], o[1] + 3.2, 0.0)
         bpy.context.view_layer.update()
 
-        # ---- camera: shotcraft placement + camera.py rig/move
-        framing, subj, angle = s["cam"]; lens = LENS[framing]; hd = None
-        if subj in RIGS:
-            r = RIGS[subj]; hd = head(r); ignore = names_of(r)
-            lying = s["chars"][subj][3] == "lie_bed"
-            front = Vector((0, -1, 0)) if lying else (Matrix.Rotation(r.rotation_euler.z, 3, "Z") @ Vector((0, -1, 0)))
-            subject_pt = Vector((hd.x, hd.y, 1.1)) if framing == "wide" else hd
-            dist = SC.distance_for(framing, lens)
-        else:
-            ob = OBJ[subj]; ignore = names_of(ob)
-            holder = s["props"].get(subj)  # a held prop: its holder's arm is not an obstacle
-            if isinstance(holder, str) and holder in RIGS: ignore |= names_of(RIGS[holder])
-            kids = [c for c in ob.children if c.type in ("MESH", "FONT")] if ob.type == "EMPTY" else [ob]
-            pts = [c.matrix_world @ Vector(v) for c in kids for v in c.bound_box]
-            subject_pt = sum(pts, Vector()) / len(pts); front = Vector((0, -1, 0))
-            ext = max((max(p[i] for p in pts) - min(p[i] for p in pts)) for i in range(3))
-            txt = [c for c in kids if c.type == "FONT"]
-            if txt and framing in ("cu", "insert"): subject_pt = txt[0].matrix_world.translation.copy()
-            if subj == "desk": subject_pt.z = 1.15
-            if subj == "elevator": front = Vector((-1, 0, 0)); subject_pt.z = 1.4
-            dist = SC.distance_for(framing, lens) if framing == "wide" else SC.distance_for(None, lens, height=max(0.35, ext * 1.6))
-        height = {"low": -0.45, "high": 0.9}.get(angle, 0.05) * (dist if framing != "wide" else 0.5)
-        if angle == "top":
-            pos = subject_pt + Vector((0, -0.05, dist + 0.6)); info = {"clear": 1.0, "swung": 0}
-        elif angle == "ots":  # over the clerk's shoulder toward the other character
-            rc = RIGS["CLK"]; back = Matrix.Rotation(rc.rotation_euler.z, 3, "Z") @ Vector((0, 1, 0))
-            pos = head(rc) + back * 0.9 + Vector((0.35, 0, 0.2)); info = {"clear": 1.0, "swung": 0}
-            other = RIGS["INF"] if subj == "CLK" else RIGS[subj]; hd = head(other)
-            subject_pt = hd - Vector((0, 0, 0.4 if framing == "wide" else 0.1))
-        else:
-            pos, info = SC.place(subject_pt, front, dist, ANGLE.get(angle, 0), height, ignore=ignore)
-        pos.z = max(pos.z, 0.35)
-        aim_pt = SC.aim_point(hd, framing, pos, lens) if (hd is not None and framing in SC.EYE_LINE and angle != "ots") else subject_pt
-        rg = C.rig(f"S{s['id']:02d}", pos, aim_pt, lens); sc.camera = rg.cam
         n_frames = max(2, round((s["t1"] - s["t0"]) * FPS))
-        if s.get("move"):
-            C.apply(rg, s["move"], 1, n_frames, {n: (RIGS[n], "head") for n in RIGS})
+        rg, pos, aim_pt, hd, info = shot_camera(s, 1, n_frames)
         sc.frame_set(1)
         sc.render.filepath = os.path.join(OUT, f"shot_{s['id']:02d}.png"); bpy.ops.render.render(write_still=True)
         if s.get("move"):
