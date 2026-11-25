@@ -55,8 +55,8 @@ lp = bpy.data.objects.new("LGT_Chandelier", Lp); sc.collection.objects.link(lp);
 sc.world = sc.world or bpy.data.worlds.new("WLD_Lobby"); sc.world.color = (0.03, 0.022, 0.018)
 items = [e.identifier for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items]
 sc.render.engine = next(e for e in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE") if e in items)
-sc.render.resolution_x, sc.render.resolution_y, sc.render.resolution_percentage = 540, 960, 100
-for attr, val in (("taa_render_samples", 12), ("use_raytracing", False), ("use_gtao", True)):
+sc.render.resolution_x, sc.render.resolution_y, sc.render.resolution_percentage = 432, 768, 100
+for attr, val in (("taa_render_samples", 8), ("use_raytracing", False), ("use_gtao", True)):
     try: setattr(sc.eevee, attr, val)
     except (AttributeError, TypeError): pass
 sc.view_settings.view_transform = "AgX"
