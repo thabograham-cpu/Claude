@@ -93,9 +93,13 @@ def lint(sheet, shots, words=None, fps=24):
         if not v or re.match(r"^(show|shows|we see|he is shown|close-up of)\b", v) or not re.search(r"\w+s\b|\w+ing\b|\w+ed\b", v):
             P.append(f"beat {b['id']}: visual must be an action we watch happen, not a character on display ({b.get('visual')!r})")
         if b.get("func") in ("reaction", "pause") or b.get("joke"):
-            end = b["t1"]; cut = next((s["t1"] for s in shots if s["t0"] <= end < s["t1"]), None)
-            if cut is not None and cut - end < PACE["joke_hold"] - 1e-6:
-                P.append(f"beat {b['id']}: the joke/reaction needs {PACE['joke_hold']} s to land; the cut comes {cut - end:.2f} s after the line")
+            end = b["t1"]; cur = next((s for s in shots if s["t0"] <= end < s["t1"]), None)
+            need = min(PACE["joke_hold"], b.get("gap_after", PACE["joke_hold"]))   # the narration's own pause caps the hold
+            nxt = next((s for s in shots if cur and abs(s["t0"] - cur["t1"]) < 1e-6), None)
+            landed = nxt is not None and nxt.get("func") == "reaction" and nxt["t1"] - nxt["t0"] >= need - 1e-6   # cut straight to a held reaction
+            cut = cur["t1"] if cur else None
+            if cut is not None and cut - end < need - 1e-6 and not landed:
+                P.append(f"beat {b['id']}: the joke/reaction needs {need:.2f} s to land; the cut comes {cut - end:.2f} s after the line")
     lens = [s["t1"] - s["t0"] for s in shots]
     for s, L in zip(shots, lens):
         if L < PACE["min_shot"] - 1e-6 and not s.get("flash"): P.append(f"shot {s['id']}: {L:.2f} s is too short to read")

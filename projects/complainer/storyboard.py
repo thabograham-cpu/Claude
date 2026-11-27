@@ -87,12 +87,19 @@ def suitcase(c, color, s=1.0):
 
 
 CASE_COLS = ["e91e63", "111111", "f5f5f5", "9c27b0", "ffc107", "00bcd4", "795548", "e91e63", "222222", "ff5722", "8bc34a", "3f51b5", "f5f5f5", "ff9800"]
-cart = []                                                     # 14 suitcases on the kit's brass birdcage trolley
-for k in range(14):
-    col, row = k % 2, k // 2
-    cart.append(suitcase(((col - 0.5) * 0.48, 0, 0.45 + row * 0.24), CASE_COLS[k], 0.9)); cart[-1].rotation_euler = (math.pi / 2, 0, 0)
-OBJ["cart"] = HK.trolley("cart", HOTEL["palette"], sc.collection)
-for o in cart: o.parent = OBJ["cart"]
+OBJ["cart"] = HK.trolley("cart", HOTEL["palette"], sc.collection)   # 14 real suitcases, two lying-flat stacks on the brass trolley
+OBJ["cart_wheels"] = HK.trolley_wheels(OBJ["cart"], HOTEL["palette"])
+KINDS = ["large", "medium", "large", "medium", "medium", "cabin", "medium", "cabin", "cabin", "duffel", "cabin", "cabin", "duffel", "cabin"]
+z_col = [0.175, 0.175]
+for k, kind in enumerate(KINDS):
+    col = k % 2; w, d, h = HK.SUITCASE[kind]; o = HK.suitcase(f"cart{k}", kind, lin(CASE_COLS[k]), HOTEL["palette"], sc.collection, parent=OBJ["cart"])
+    if kind == "duffel":
+        o.location = ((col - 0.5) * 0.56, 0.0, z_col[col]); o.rotation_euler = (0, 0, math.pi / 2 + 0.15 * (k % 3 - 1)); z_col[col] += d + 0.01
+    else:                                                     # lying on its back, long side along Y, slightly askew
+        o.rotation_euler = (math.pi / 2, 0, 0.06 * ((k * 7) % 5 - 2)); o.location = ((col - 0.5) * 0.56, (h + 0.06) / 2, z_col[col] + d / 2)
+        z_col[col] += d + 0.004
+OBJ["bugbox"] = OBJ["small_box"] = HK.bug_box("inf", sc.collection, HOTEL["palette"])
+OBJ["bugroach"] = HK.cockroach("box", sc.collection, HOTEL["palette"]); OBJ["bugroach"].parent = OBJ["bugbox"]; OBJ["bugroach"].location = (0, 0.012, 0.004)
 tag = text("HELD", (0, -0.4, 1.3), 0.25, "d11a1a", name="TXT_tag"); tag.parent = OBJ["cart"]
 oc = [box((0, 0, 0.12), (1.0, 0.7, 0.24), "e91e63"), box((0, 0.45, 0.45), (1.0, 0.06, 0.7), "e91e63")]
 robes = [ball((x * 0.22 - 0.33, y * 0.2 - 0.15, 0.3), 0.16, "ffffff", (1.2, 1, 0.6)) for x in range(4) for y in range(3)]
@@ -100,7 +107,6 @@ group("robes", robes); oc.append(OBJ["robes"])
 group("open_case", oc)
 rbox = [box((0, 0, 0.06), (0.16, 0.12, 0.12), "b08a5a")]
 group("roach_box", rbox)
-OBJ["small_box"] = box((0, 0, 0), (0.1, 0.08, 0.08), "b08a5a", "SM_SmallBox")
 OBJ["phone"] = box((0, 0, 0), (0.075, 0.01, 0.15), "111111", "SM_Phone")
 
 # STAIRWELL: built by the hotel kit (switchback flights, floor signs 1..9)
@@ -226,6 +232,17 @@ def shot_camera(s, f0, f1):
         if subj == "elevator": front = Vector((-1, 0, 0)); subject_pt.z = 1.4
         dist = SC.distance_for(framing, lens) if framing == "wide" else SC.distance_for(None, lens, height=max(0.35, ext * 1.6))
     height = {"low": -0.45, "high": 0.9}.get(angle, 0.05) * (dist if framing != "wide" else 0.5)
+    if s.get("cam_path"):  # a designed move: [(t, cam xyz, aim xyz, lens)] in set-local coords; Bezier-eased between keys
+        o3 = Vector(ORIGIN[s["set"]]); P0 = s["cam_path"][0]
+        a0 = head(RIGS[P0[2]]) if isinstance(P0[2], str) else Vector(P0[2]) + o3
+        rg = C.rig(f"S{s['id']:02d}", Vector(P0[1]) + o3, a0, P0[3]); sc.camera = rg.cam
+        for t, cp, ap, ln in s["cam_path"]:
+            f = f0 + round(t * 24)
+            if isinstance(ap, str): s["_aim_follow"] = ap; ap = tuple(head(RIGS[ap]) - o3)   # aim follows that character's eyes (keyed later)
+            rg.cam.location = Vector(cp) + o3; rg.target.location = Vector(ap) + o3; rg.cam.data.lens = ln
+            rg.cam.keyframe_insert("location", frame=f); rg.target.keyframe_insert("location", frame=f); rg.cam.data.keyframe_insert("lens", frame=f)
+        if s.get("handheld"): C.handheld(rg, s["handheld"], f0=f0, f1=f1)
+        return rg, Vector(P0[1]) + o3, a0, hd, {"clear": 1.0, "swung": 0}
     if s.get("cam_at"):  # explicit placement (set-local camera point, aim point): establishing shots of buildings, specific views
         o3 = ORIGIN[s["set"]]; (cp, ap) = s["cam_at"]
         pos = Vector(cp) + Vector(o3); aim_pt = Vector(ap) + Vector(o3); info = {"clear": 1.0, "swung": 0}

@@ -16,7 +16,7 @@ import bpy, bmesh
 from mathutils import Vector, Matrix, Euler
 
 FLOOR_H = 3.6
-ORIGIN = {"lobby": (0, 0, 0), "stairs": (-8.5, 0.5, 0), "hall": (0, 3.0, 4 * FLOOR_H), "suite": (0, 11.0, 9 * FLOOR_H),
+ORIGIN = {"lobby": (0, 0, 0), "stairs": (-8.375, 0.5, 0), "hall": (0, 3.0, 4 * FLOOR_H), "suite": (0, 11.0, 9 * FLOOR_H),
           "petstore": (25, -8.75, 0), "street": (0, -9.5, 0)}
 ROOMS, ROUTES, ANCHORS, OBJ, LIGHTS = {}, {}, {}, {}, []
 SHADOW_LIGHTS = ("chandelier", "pendant", "canopy", "car_", "stair", "lamp")
@@ -541,15 +541,16 @@ def grand_aurelia(floors=9, corridor_floors=(4, 9)):
     mb = MB("STAIR_module", mod)
     mb.box((sx0, sy0, -0.25), (sx1, 0.5, 0.0), P["concrete"])                                    # floor landing
     mb.box((sx0, 3.5, 1.55), (sx1, sy1, 1.8), P["concrete"])                                       # mid landing
+    AX0, AX1, BX0, BX1 = -9.05, -7.7, -11.1, -9.75                                 # flights 1.35 m, an open 0.7 m well between them
     for k in range(10):
-        mb.box((-9.3, 0.5 + 0.3 * k, 0.18 * (k + 1) - 0.4), (-7.7, 0.5 + 0.3 * (k + 1), 0.18 * (k + 1)), P["concrete"])
-        mb.box((-9.3, 0.5 + 0.3 * k, 0.18 * (k + 1)), (-7.7, 0.5 + 0.3 * k + 0.04, 0.18 * (k + 1) + 0.004), P["black"])   # nosing
-        mb.box((-11.1, 3.5 - 0.3 * (k + 1), 1.8 + 0.18 * (k + 1) - 0.4), (-9.5, 3.5 - 0.3 * k, 1.8 + 0.18 * (k + 1)), P["concrete"])
-        mb.box((-11.1, 3.5 - 0.3 * k - 0.04, 1.8 + 0.18 * (k + 1)), (-9.5, 3.5 - 0.3 * k, 1.8 + 0.18 * (k + 1) + 0.004), P["black"])
-    for k in range(0, 11, 2):                                                     # balusters on the well side
-        mb.rod((-9.4, 0.5 + 0.3 * k, 0.18 * k), (-9.4, 0.5 + 0.3 * k, 0.18 * k + 0.95), 0.015, P["black"])
-        mb.rod((-9.4, 3.5 - 0.3 * k, 1.8 + 0.18 * k), (-9.4, 3.5 - 0.3 * k, 1.8 + 0.18 * k + 0.95), 0.015, P["black"])
-    mb.rod((-9.4, 0.5, 0.95), (-9.4, 3.5, 2.75), 0.025, P["walnut"]); mb.rod((-9.4, 3.5, 2.75), (-9.4, 0.5, 4.55), 0.025, P["walnut"])
+        mb.box((AX0, 0.5 + 0.3 * k, 0.18 * (k + 1) - 0.4), (AX1, 0.5 + 0.3 * (k + 1), 0.18 * (k + 1)), P["concrete"])
+        mb.box((AX0, 0.5 + 0.3 * k, 0.18 * (k + 1)), (AX1, 0.5 + 0.3 * k + 0.04, 0.18 * (k + 1) + 0.004), P["black"])   # nosing
+        mb.box((BX0, 3.5 - 0.3 * (k + 1), 1.8 + 0.18 * (k + 1) - 0.4), (BX1, 3.5 - 0.3 * k, 1.8 + 0.18 * (k + 1)), P["concrete"])
+        mb.box((BX0, 3.5 - 0.3 * k - 0.04, 1.8 + 0.18 * (k + 1)), (BX1, 3.5 - 0.3 * k, 1.8 + 0.18 * (k + 1) + 0.004), P["black"])
+    for k in range(0, 11, 2):                                                     # balusters on both well edges
+        mb.rod((AX0 - 0.03, 0.5 + 0.3 * k, 0.18 * k), (AX0 - 0.03, 0.5 + 0.3 * k, 0.18 * k + 0.95), 0.015, P["black"])
+        mb.rod((BX1 + 0.03, 3.5 - 0.3 * k, 1.8 + 0.18 * k), (BX1 + 0.03, 3.5 - 0.3 * k, 1.8 + 0.18 * k + 0.95), 0.015, P["black"])
+    mb.rod((AX0 - 0.03, 0.5, 0.95), (AX0 - 0.03, 3.5, 2.75), 0.025, P["walnut"]); mb.rod((BX1 + 0.03, 3.5, 2.75), (BX1 + 0.03, 0.5, 4.55), 0.025, P["walnut"])
     mb.rod((-7.55, 0.5, 0.95), (-7.55, 3.5, 2.75), 0.02, P["steel"]); mb.rod((-11.25, 3.5, 2.75), (-11.25, 0.5, 4.55), 0.02, P["steel"])
     wall(mb, "y", sx0, sy0 - 0.25, sy1 + 0.25, 0, FLOOR_H, P["stairpaint"], 1)
     wall(mb, "x", sy0, sx0, sx1, 0, FLOOR_H, P["stairpaint"], 1); wall(mb, "x", sy1, sx0, sx1, 0, FLOOR_H, P["stairpaint"], -1)
@@ -797,3 +798,112 @@ def eevee_quality(sc=None, samples=12, raytrace=True, shadow_scale=0.5):
     sc.view_settings.view_transform = "AgX"
     try: sc.view_settings.look = "AgX - Medium High Contrast"
     except TypeError: pass
+
+
+# ---------------------------------------------------------------- hero props (story objects: recognisable, not blocks)
+SUITCASE = {"cabin": (0.36, 0.22, 0.55), "medium": (0.44, 0.26, 0.68), "large": (0.5, 0.29, 0.78), "duffel": (0.62, 0.3, 0.3)}
+
+
+def _shell(name, color, rough=0.45):
+    return material(f"HK_Shell_{name}", color, rough, var=0.04, bump=0.04)
+
+
+def suitcase(name, kind="medium", color=(0.7, 0.1, 0.3), P=None, c=None, parent=None):
+    """A hard-shell spinner suitcase (or a duffel): rounded shell with ribs, zip seam, corner guards, carry
+    handle, telescopic handle and four spinner wheels. Origin at the bottom centre; +Z up, front = -Y.
+    Returns the object (one mesh, bevelled)."""
+    P = P or palette(); c = c or bpy.context.scene.collection
+    w, d, h = SUITCASE[kind]; sh = _shell(f"{kind}_{name}", color); mb = MB(f"SM_Case_{name}", c)
+    if kind == "duffel":
+        mb.cyl((0, 0, h / 2), h / 2, w, sh, axis="X", seg=20)
+        for x in (-w * 0.3, w * 0.3): mb.cyl((x, 0, h / 2), h / 2 + 0.006, 0.04, P["black"], axis="X", seg=20)   # straps
+        mb.rod((-w * 0.18, 0, h), (-w * 0.12, 0, h + 0.12), 0.012, P["black"]); mb.rod((w * 0.18, 0, h), (w * 0.12, 0, h + 0.12), 0.012, P["black"])
+        mb.rod((-w * 0.12, 0, h + 0.12), (w * 0.12, 0, h + 0.12), 0.014, P["black"])
+        ob = mb.done(bevel=0.01, parent=parent); return ob
+    z0 = 0.06
+    mb.box((-w / 2, -d / 2, z0), (w / 2, d / 2, z0 + h), sh)
+    for k in range(1, 5):                                                    # vertical ribs on the front shell
+        x = -w / 2 + k * w / 5; mb.box((x - 0.012, -d / 2 - 0.006, z0 + 0.05), (x + 0.012, -d / 2, z0 + h - 0.05), sh)
+    mb.box((-w / 2 - 0.004, -0.006, z0 + 0.01), (w / 2 + 0.004, 0.006, z0 + h - 0.01), P["black"])          # zip seam
+    for sx in (-1, 1):
+        for sz in (z0, z0 + h - 0.05):
+            x0, x1 = (w / 2 - 0.05, w / 2 + 0.004) if sx > 0 else (-w / 2 - 0.004, -w / 2 + 0.05)
+            mb.box((x0, -d / 2 - 0.004, sz), (x1, d / 2 + 0.004, sz + 0.05), P["black"])             # corner guards
+    mb.box((-0.07, -0.02, z0 + h), (0.07, 0.02, z0 + h + 0.012), P["black"]); mb.rod((-0.06, 0, z0 + h + 0.012), (-0.06, 0, z0 + h + 0.04), 0.008, P["black"])
+    mb.rod((0.06, 0, z0 + h + 0.012), (0.06, 0, z0 + h + 0.04), 0.008, P["black"]); mb.rod((-0.06, 0, z0 + h + 0.04), (0.06, 0, z0 + h + 0.04), 0.011, P["black"])
+    for x in (-0.09, 0.09): mb.box((x - 0.012, d / 2, z0 + h - 0.02), (x + 0.012, d / 2 + 0.02, z0 + h + 0.03), P["steel"])  # telescopic handle (stowed)
+    mb.box((-0.1, d / 2, z0 + h + 0.03), (0.1, d / 2 + 0.025, z0 + h + 0.055), P["black"])
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            mb.box((sx * (w / 2 - 0.05) - 0.02, sy * (d / 2 - 0.04) - 0.02, z0 - 0.012), (sx * (w / 2 - 0.05) + 0.02, sy * (d / 2 - 0.04) + 0.02, z0), P["black"])
+            mb.cyl((sx * (w / 2 - 0.05), sy * (d / 2 - 0.04), 0.028), 0.028, 0.022, P["black"], axis="Y", seg=12)
+    return mb.done(bevel=0.012, parent=parent)
+
+
+def trolley_wheels(root, P):
+    """Spinnable wheel objects for a trolley root (children; key rotation_euler.x to roll)."""
+    out = []
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            mb = MB(f"SM_TrolleyWheel_{root.name}_{sx}{sy}", root.users_collection[0])
+            mb.cyl((0, 0, 0), 0.05, 0.035, P["black"], axis="X", seg=16); mb.box((-0.02, -0.045, -0.006), (0.02, 0.045, 0.006), P["steel"])
+            ob = mb.done(parent=root); ob.location = (sx * 0.5, sy * 0.24, 0.05); out.append(ob)
+    return out
+
+
+def cockroach(name, c=None, P=None):
+    """A recognisable cockroach (~6 cm Madagascar hisser): segmented body, head, antennae, six jointed legs.
+    Origin under the body; front = -Y. Returns the root empty (antennae are children for wiggle keys)."""
+    P = P or palette(); c = c or bpy.context.scene.collection
+    shell = material("HK_RoachShell", (0.24, 0.12, 0.05), 0.35, var=0.15, bump=0.2); dark = material("HK_RoachDark", (0.08, 0.04, 0.02), 0.5)
+    root = empty(f"ROACH_{name}", (0, 0, 0), c); mb = MB(f"SM_Roach_{name}", c)
+    for k in range(7):                                                        # abdomen plates, tapering to the tail
+        y = 0.005 + k * 0.007; r = 0.016 - abs(k - 2) * 0.0016
+        mb.sphere((0, y, 0.008), r, shell, scale=(1.0, 0.55, 0.45), seg=12)
+    mb.sphere((0, -0.012, 0.009), 0.011, shell, scale=(1.1, 0.9, 0.5), seg=12)                     # pronotum
+    mb.sphere((0, -0.024, 0.006), 0.006, dark, seg=10)                                              # head
+    for sx in (-1, 1):
+        for j, (y, a) in enumerate(((-0.01, -0.6), (0.004, 0.0), (0.018, 0.6))):
+            hip = Vector((sx * 0.009, y, 0.006)); knee = hip + Vector((sx * 0.013, a * 0.006, 0.006)); foot = knee + Vector((sx * 0.01, a * 0.012, -0.012))
+            mb.rod(hip, knee, 0.0012, dark, seg=5); mb.rod(knee, foot, 0.001, dark, seg=5)
+    body = mb.done(parent=root)
+    for sx in (-1, 1):
+        am = MB(f"SM_RoachAntenna_{name}_{sx}", c); am.rod((0, 0, 0), (sx * 0.012, -0.026, 0.008), 0.0006, dark, seg=4)
+        a = am.done(parent=root); a.location = (sx * 0.002, -0.028, 0.008)
+    return root
+
+
+def bug_box(name, c=None, P=None):
+    """Pet-store insect carrier: kraft cardboard box with air holes, a 'LIVE INSECTS' band, wire handle and a
+    hinged lid (child 'LID_<name>' rotates about X at the back edge). Origin at the bottom centre; ~10 x 8 x 8 cm."""
+    P = P or palette(); c = c or bpy.context.scene.collection
+    kraft = material("HK_Kraft", (0.62, 0.45, 0.28), 0.85, var=0.08, bump=0.25); label = material("HK_LabelGreen", (0.12, 0.42, 0.2), 0.6, var=0.02)
+    root = empty(f"BUGBOX_{name}", (0, 0, 0), c); mb = MB(f"SM_BugBox_{name}", c); w, d, h = 0.1, 0.08, 0.075
+    mb.box((-w / 2, -d / 2, 0), (w / 2, -d / 2 + 0.003, h), kraft); mb.box((-w / 2, d / 2 - 0.003, 0), (w / 2, d / 2, h), kraft)
+    mb.box((-w / 2, -d / 2, 0), (-w / 2 + 0.003, d / 2, h), kraft); mb.box((w / 2 - 0.003, -d / 2, 0), (w / 2, d / 2, h), kraft)
+    mb.box((-w / 2, -d / 2, 0), (w / 2, d / 2, 0.003), kraft)
+    for (x0, y0, x1, y1) in ((-w / 2 - 0.0008, -d / 2 - 0.0008, w / 2 + 0.0008, -d / 2), (-w / 2 - 0.0008, d / 2, w / 2 + 0.0008, d / 2 + 0.0008),
+                             (-w / 2 - 0.0008, -d / 2, -w / 2, d / 2), (w / 2, -d / 2, w / 2 + 0.0008, d / 2)):
+        mb.box((x0, y0, 0.022), (x1, y1, 0.042), label)                        # printed band on the outside only
+    for i in range(4):
+        for sx in (-1, 1): mb.cyl((sx * (w / 2 + 0.0005), -0.025 + i * 0.017, 0.056), 0.0035, 0.002, P["black"], axis="X", seg=8)
+    mb.rod((-0.03, 0, h + 0.004), (-0.025, 0, h + 0.03), 0.0012, P["steel"]); mb.rod((0.03, 0, h + 0.004), (0.025, 0, h + 0.03), 0.0012, P["steel"])
+    mb.rod((-0.025, 0, h + 0.03), (0.025, 0, h + 0.03), 0.0012, P["steel"])
+    mb.done(parent=root)
+    hinge = empty(f"LID_{name}", (0, d / 2, h), c); hinge.parent = root
+    lm = MB(f"SM_BugBoxLid_{name}", c); lm.box((-w / 2 - 0.002, -d - 0.002, 0.0), (w / 2 + 0.002, 0.002, 0.004), kraft)
+    lm.box((-w / 2 - 0.002, -d - 0.002, -0.012), (w / 2 + 0.002, -d + 0.001, 0.0), kraft)            # front flap
+    lm.done(parent=hinge)
+    text("LIVE INSECTS", (0, -d / 2 - 0.0012, 0.032), 0.011, material("HK_LabelText", (0.95, 0.93, 0.85), 0.6), c, rot=(math.pi / 2, 0, 0), name=f"TXT_bugbox_{name}", extrude=0.0003, parent=root).location = (0, -d / 2 - 0.0012, 0.032)
+    return root
+
+
+def phone(name, c=None, P=None, screen=(0.55, 0.75, 1.0)):
+    """Smartphone (7.4 x 15.2 x 0.8 cm): dark rounded body, bright screen on -Y (the face side), camera bump on +Y.
+    Origin at its centre; long axis Z."""
+    P = P or palette(); c = c or bpy.context.scene.collection
+    scr = material(f"HK_PhoneScreen_{name}", screen, 0.2, emit=2.2, var=0.0, bump=0.0)
+    mb = MB(f"SM_Phone_{name}", c)
+    mb.box((-0.037, -0.004, -0.076), (0.037, 0.004, 0.076), P["black"]); mb.box((-0.034, -0.0045, -0.072), (0.034, -0.004, 0.072), scr)
+    mb.box((0.008, 0.004, 0.045), (0.032, 0.0065, 0.07), P["black"]); mb.cyl((0.02, 0.0068, 0.058), 0.006, 0.002, P["steel"], axis="Y", seg=12)
+    return mb.done(bevel=0.003)

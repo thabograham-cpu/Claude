@@ -69,6 +69,7 @@ ACCENTS = {
     "lean_in": (1.4, lambda u: {"spine03": (4 * _hold(u), 0, 0), "spine02": (3 * _hold(u), 0, 0), "head": (-2 * _hold(u), 0, 0)}),
     "adjust_phone": (0.9, lambda u: {"lowerarm01.R": (-6 * _bump(u), 0, 0), "wrist.R": (0, 12 * math.sin(2 * math.pi * u) * _bump(u), 0),
                                      "head": (2 * _bump(u), 3 * _bump(u), 0)}),
+    "phone_tap": (0.5, lambda u: {"wrist.R": (-5 * _bump(u * 2) - 5 * _bump(u * 2 - 1), 0, 0), "head": (2 * _bump(u), 0, 0)}),
     "beat":  (0.35, lambda u: {"lowerarm01*": (-4 * _bump(u), 0, 0), "head": (1.5 * _bump(u), 0, 0)}),   # emphasis on a stressed word
 }
 
@@ -79,6 +80,7 @@ HANDS = {
     "fist":    {"f1": (10, 30, 30), "f2": (70, 95, 60), "f3": (75, 95, 60), "f4": (78, 95, 60), "f5": (80, 95, 60)},
     "point":   {"f1": (10, 25, 25), "f2": (2, 3, 2), "f3": (75, 95, 60), "f4": (78, 95, 60), "f5": (80, 95, 60)},
     "grip":    {"f1": (10, 20, 20), "f2": (45, 55, 35), "f3": (48, 55, 35), "f4": (50, 55, 35), "f5": (52, 55, 35)},
+    "cup":     {"f1": (6, 12, 12), "f2": (26, 32, 22), "f3": (28, 34, 22), "f4": (30, 36, 24), "f5": (32, 38, 26)},   # an object on the palm
 }
 FINGER_BONES = {f"f{k}": [f"finger{k}-{j}" for j in (1, 2, 3)] for k in range(1, 6)}
 
@@ -97,6 +99,7 @@ POSES = {
     "palm_up_R":   {"arm.L": _STAND, "arm.R": dict(at="root", off=(-0.2, -0.36, 0.16), pole=(-0.5, 0.6, -1), twist=55), "hand.R": "open"},
     "point_fwd_R": {"arm.L": _STAND, "arm.R": dict(at="upperarm01.R", off=(-0.06, -0.45, 0.0), pole=(-0.3, 0, -1)), "hand.R": "point"},
     "point_up_R":  {"arm.L": _STAND, "arm.R": dict(at="upperarm01.R", off=(-0.1, -0.14, 0.42), pole=(-1, 0, -0.2)), "hand.R": "point"},
+    "point_side_R": {"arm.L": _STAND, "arm.R": dict(at="upperarm01.R", off=(-0.42, -0.16, 0.08), pole=(0, 1, -0.4)), "hand.R": "point"},
     "snap_R":      {"arm.L": _STAND, "arm.R": dict(at="upperarm01.R", off=(-0.12, -0.36, -0.12), pole=(-0.6, 0.2, -1)), "hand.R": "point"},
     "rub_neck_R":  {"arm.L": _STAND, "arm.R": dict(at="neck02", off=(-0.11, 0.06, -0.01), pole=(-1, -0.6, 0.3), wrist=(0.8, 0.4, 0.3)),
                     "hand.R": "relaxed"},
@@ -109,6 +112,10 @@ POSES = {
                     "arm.L": dict(at="head", off=(0.02, -0.33, -0.17), pole=(0.7, 0.3, -1)), "hand.L": "grip"},
     "phone_selfie_R": {"arm.L": _STAND, "arm.R": dict(at="head", off=(-0.12, -0.42, -0.02), pole=(-0.5, 0.2, -1)), "hand.R": "grip"},
     "phone_check_R":  {"arm.L": _STAND, "arm.R": dict(at="spine01", off=(-0.06, -0.3, -0.1), pole=(-0.4, 0.6, -1)), "hand.R": "grip"},
+    "carry_two":   {"arm*": dict(at="upperleg01.L", off=(0.17, -0.02, 0.0), pole=(1, 0.3, 0), wrist=(0.15, 0.0, -1)), "hand*": "grip"},
+    "show_box_R":  {"arm.L": _STAND, "arm.R": dict(at="spine01", off=(-0.04, -0.34, 0.02), pole=(-0.6, 0.4, -1), wrist=(0.25, -0.6, 0.2)),
+                    "hand.R": "cup"},
+    "pocket_R":    {"arm.L": _STAND, "arm.R": dict(at="upperleg01.R", off=(-0.06, -0.09, -0.02), pole=(-0.6, 1, 0)), "hand.R": "relaxed"},
 }
 # poses not in POSES (project libraries) get hands from their name
 _GRIP = ("selfie", "film", "phone", "show_box", "pay", "slide", "carry", "push")
@@ -600,6 +607,39 @@ def eyeline_lint(rigs, specs, f0, f1, step=6):
             eye = rig.matrix_world @ _eyes_point(rig); a = (e.matrix_world.translation - eye); c = cam - eye
             if a.length and c.length and math.degrees(a.angle(c)) < 10:
                 out.append(f"{name} looks into the lens at frame {f}"); break
+    return out
+
+
+def foot_ik(rig, f0, f1, plants, lift=0.14, ankle=0.08):
+    """Plant the feet on given footholds (stairs, kerbs) with IK: plants = [(frame, "L"|"R", world (x, y, z))] =
+    when each foot lands where. Between two plants of a foot the ankle swings in a lifted arc; IK chains
+    (lowerleg02 -> upperleg01) reach the ankle targets, knees aim at poles in front of the rig. Influence is
+    keyed 1 inside f0..f1 only, so the acting layer's leg cycle runs everywhere else."""
+    import bpy
+    from mathutils import Vector
+    sc = bpy.context.scene; out = {}
+    for side in ("L", "R"):
+        tgt = bpy.data.objects.get(f"IK_{rig.name}_{side}") or bpy.data.objects.new(f"IK_{rig.name}_{side}", None)
+        pole = bpy.data.objects.get(f"POLE_{rig.name}_{side}") or bpy.data.objects.new(f"POLE_{rig.name}_{side}", None)
+        for o in (tgt, pole):
+            if o.name not in sc.collection.objects: sc.collection.objects.link(o)
+        pole.parent = rig; pole.location = (0.12 if side == "L" else -0.12, -0.8, 0.55)
+        pb = rig.pose.bones[f"lowerleg02.{side}"]
+        c = pb.constraints.get("FOOT_IK") or pb.constraints.new("IK"); c.name = "FOOT_IK"
+        c.target = tgt; c.pole_target = pole; c.chain_count = 4; c.pole_angle = math.radians(-90); c.use_tail = True
+        for f, v in ((f0 - 1, 0.0), (f0, 1.0), (f1, 1.0), (f1 + 1, 0.0)):
+            c.influence = v; c.keyframe_insert("influence", frame=f)
+        P = sorted((f, Vector(p) + Vector((0, 0, ankle))) for f, sd, p in plants if sd == side)
+        for f in range(f0, f1 + 1):
+            prev = max((q for q in P if q[0] <= f), default=P[0], key=lambda q: q[0])
+            nxt = min((q for q in P if q[0] > f), default=None, key=lambda q: q[0])
+            if nxt is None or f <= prev[0]: pos = prev[1]
+            else:
+                swing0 = max(prev[0], nxt[0] - 10)                       # the foot leaves ~10 frames before it lands
+                u = 0.0 if f < swing0 else (f - swing0) / max(1, nxt[0] - swing0)
+                u = u * u * (3 - 2 * u); pos = prev[1].lerp(nxt[1], u) + Vector((0, 0, lift * math.sin(math.pi * u)))
+            tgt.location = pos; tgt.keyframe_insert("location", frame=f)
+        out[side] = tgt
     return out
 
 

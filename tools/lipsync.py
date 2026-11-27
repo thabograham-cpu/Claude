@@ -86,8 +86,8 @@ EMOTION = {
     "annoyed":   dict(face={"browDownLeft": 0.4, "browDownRight": 0.4, "eyeSquintLeft": 0.2, "eyeSquintRight": 0.2,
                             "mouthPressLeft": 0.3, "mouthPressRight": 0.3, "mouthFrownLeft": 0.15, "mouthFrownRight": 0.15, "noseSneerRight": 0.1},
                       gain=0.95, nod=2.5, tilt=0.0, accent={"browDownLeft": 0.15, "browDownRight": 0.15}),
-    "disbelief": dict(face={"browInnerUp": 0.5, "browOuterUpLeft": 0.45, "browOuterUpRight": 0.35, "eyeWideLeft": 0.25, "eyeWideRight": 0.25,
-                            "jawOpen": 0.12, "mouthShrugUpper": 0.1}, rest={},
+    "disbelief": dict(face={"browInnerUp": 0.65, "browOuterUpLeft": 0.6, "browOuterUpRight": 0.45, "eyeWideLeft": 0.35, "eyeWideRight": 0.35,
+                            "jawOpen": 0.16, "mouthShrugUpper": 0.12}, rest={},
                       gain=0.9, nod=1.0, tilt=2.0, accent={"browInnerUp": 0.15}),
     "embarrassed": dict(face={"browInnerUp": 0.4, "mouthSmileLeft": 0.2, "mouthSmileRight": 0.2, "mouthPressLeft": 0.2,
                               "mouthPressRight": 0.2, "eyeLookDownLeft": 0.3, "eyeLookDownRight": 0.3, "cheekSquintLeft": 0.15, "cheekSquintRight": 0.15},
@@ -97,8 +97,8 @@ EMOTION = {
     "exhausted": dict(face={"eyeBlinkLeft": 0.32, "eyeBlinkRight": 0.32, "browInnerUp": 0.35, "mouthFrownLeft": 0.2,
                             "mouthFrownRight": 0.2, "jawOpen": 0.07}, rest={},
                       gain=0.75, nod=1.0, tilt=0.0, accent={"browInnerUp": 0.1}),
-    "surprised": dict(face={"browInnerUp": 0.6, "browOuterUpLeft": 0.55, "browOuterUpRight": 0.55, "eyeWideLeft": 0.45,
-                            "eyeWideRight": 0.45, "jawOpen": 0.18}, rest={},
+    "surprised": dict(face={"browInnerUp": 0.7, "browOuterUpLeft": 0.65, "browOuterUpRight": 0.65, "eyeWideLeft": 0.55,
+                            "eyeWideRight": 0.55, "jawOpen": 0.22}, rest={},
                       gain=1.1, nod=1.0, tilt=0.0, accent={"browInnerUp": 0.2}),
 }
 BLINK = ("eyeBlinkLeft", "eyeBlinkRight")
