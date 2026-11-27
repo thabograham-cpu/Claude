@@ -15,7 +15,7 @@ FPS, END_S = 24, float(os.environ.get("END_S", 20))
 sc = bpy.context.scene
 sc.render.fps = FPS; sc.frame_start, sc.frame_end = 1, round(END_S * FPS)
 look.eevee(sb, os.path.join(HERE, "frames", "f_"))
-bpy.data.objects["TXT_stamp"].hide_render = True; bpy.data.objects["TXT_tag"].data.body = ""
+bpy.data.objects["TXT_tag"].data.body = ""
 for n in ("open_case", "roach_box", "roach"): OBJ[n].location = (0, -200, 0)
 
 WALK = {"selfie_walk": "selfie", "film_walk": "film", "carry_climb": "carry_climb"}  # walkers: arms pose + acting walk cycle
@@ -107,6 +107,9 @@ for s in S:
     for name, ph in PHONES.items():
         key_vis(ph, f0, name in s["chars"] and s["chars"][name][3].startswith(HANDHELD))
     key_vis(OBJ["small_box"], f0, s["props"].get("small_box") == "INF")
+    show_bill = s["cam"][1] == "bill" or any(k in s["props"] for k in ("bill_text", "stamp")) or s["t0"] >= 69.8   # back on at checkout
+    for ob in [OBJ["bill"], *OBJ["bill"].children]: key_vis(ob, f0, show_bill and (ob.name != "TXT_stamp" or "stamp" in s["props"]))
+    for ob in [OBJ["lawbook"], *OBJ["lawbook"].children]: key_vis(ob, f0, s["t0"] >= 83.0)                     # the law book thuds down
     vip = sb["HOTEL"]["elevators"]["vip"]; HK.key_doors(vip, f0, 1.0)              # VIP doors: open, closing on elevator shots
     if "VIP doors close" in s["note"] or "doors close on them" in s["note"]:
         HK.key_doors(vip, f0 + (f1 - f0) // 3, 1.0); HK.key_doors(vip, f1, 0.0)

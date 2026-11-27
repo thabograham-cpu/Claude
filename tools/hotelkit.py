@@ -19,11 +19,15 @@ FLOOR_H = 3.6
 ORIGIN = {"lobby": (0, 0, 0), "stairs": (-8.5, 0.5, 0), "hall": (0, 3.0, 4 * FLOOR_H), "suite": (0, 11.0, 9 * FLOOR_H),
           "petstore": (25, -8.75, 0), "street": (0, -9.5, 0)}
 ROOMS, ROUTES, ANCHORS, OBJ, LIGHTS = {}, {}, {}, {}, []
+SHADOW_LIGHTS = ("chandelier", "pendant", "canopy", "car_", "stair", "lamp")
 _MATS, _COLL = {}, {}
 
 
 # ---------------------------------------------------------------- materials (procedural, world-space)
-def _rgb(c): return (*c, 1.0) if len(c) == 3 else c
+def _lin(c): return tuple(x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in c[:3])
+
+
+def _rgb(c): return (*_lin(c), 1.0)   # kit colours are written in sRGB (as picked); shaders want linear
 
 
 def material(name, color, rough=0.6, metal=0.0, kind="plain", color2=None, scale=1.0, var=0.06, bump=0.15, emit=0.0, alpha=1.0, tile=None):
@@ -39,10 +43,11 @@ def material(name, color, rough=0.6, metal=0.0, kind="plain", color2=None, scale
     c2 = color2 or tuple(max(0.0, x * (1 - 2 * var)) for x in color)
     ramp = N.new("ShaderNodeValToRGB"); ramp.color_ramp.elements[0].color = _rgb(c2); ramp.color_ramp.elements[1].color = _rgb(color)
     src = noise.outputs["Fac"]
-    if kind == "marble":                                                   # veins: distorted bands
-        wv = N.new("ShaderNodeTexWave"); wv.inputs["Scale"].default_value = 1.6; wv.inputs["Distortion"].default_value = 9.0
-        wv.inputs["Detail"].default_value = 6.0; Lk.new(mp.outputs["Vector"], wv.inputs["Vector"]); src = wv.outputs["Fac"]
-        ramp.color_ramp.elements[0].position = 0.0; ramp.color_ramp.elements[1].position = 0.22
+    if kind == "marble":                                                   # thin wandering veins: a narrow band of a noise field
+        vn = N.new("ShaderNodeTexNoise"); vn.inputs["Scale"].default_value = 1.3; vn.inputs["Detail"].default_value = 10.0
+        vn.inputs["Distortion"].default_value = 1.2; Lk.new(mp.outputs["Vector"], vn.inputs["Vector"]); src = vn.outputs["Fac"]
+        el = ramp.color_ramp.elements; el[0].color = _rgb(color); el[1].color = _rgb(color); el[1].position = 1.0
+        for pos, cc in ((0.478, color), (0.5, c2), (0.522, color)): e = el.new(pos); e.color = _rgb(cc)
     elif kind == "wood":
         wv = N.new("ShaderNodeTexWave"); wv.inputs["Scale"].default_value = 2.5; wv.inputs["Distortion"].default_value = 3.0
         wv.inputs["Detail"].default_value = 3.0; Lk.new(mp.outputs["Vector"], wv.inputs["Vector"]); src = wv.outputs["Fac"]
@@ -87,13 +92,14 @@ def palette():
         plaster_cool=M("HK_PlasterCool", (0.74, 0.73, 0.69), 0.88, kind="plaster", var=0.03, bump=0.08),
         ceiling=M("HK_Ceiling", (0.88, 0.86, 0.82), 0.9, var=0.02, bump=0.03),
         accent=M("HK_Burgundy", (0.36, 0.07, 0.1), 0.8, kind="wallpaper", color2=(0.3, 0.05, 0.08), bump=0.1),
-        walnut=M("HK_Walnut", (0.3, 0.17, 0.09), 0.5, kind="wood", color2=(0.16, 0.08, 0.04), scale=1.5, bump=0.06),
+        walnut=M("HK_Walnut", (0.3, 0.17, 0.09), 0.5, kind="wood", color2=(0.23, 0.12, 0.06), scale=1.5, bump=0.06),
         oak=M("HK_Oak", (0.55, 0.38, 0.22), 0.55, kind="wood", color2=(0.38, 0.24, 0.13), scale=1.5, bump=0.06),
         brass=M("HK_Brass", (0.8, 0.62, 0.3), 0.36, metal=1.0, var=0.05, bump=0.03),
         steel=M("HK_Steel", (0.66, 0.66, 0.68), 0.38, metal=1.0, var=0.04, bump=0.03),
         black=M("HK_BlackPaint", (0.04, 0.04, 0.045), 0.55, var=0.02),
-        carpet=M("HK_Carpet", (0.34, 0.07, 0.09), 0.95, kind="carpet", color2=(0.24, 0.04, 0.06), scale=3.0, tile=(0.45, 0.015, (0.45, 0.33, 0.16), 0.5), bump=0.25),
-        rug=M("HK_Rug", (0.12, 0.2, 0.26), 0.95, kind="carpet", color2=(0.08, 0.13, 0.17), scale=2.0, tile=(0.6, 0.02, (0.55, 0.45, 0.28)), bump=0.25),
+        carpet=M("HK_Carpet", (0.34, 0.07, 0.09), 0.95, kind="carpet", color2=(0.26, 0.05, 0.07), scale=3.0, tile=(0.45, 0.005, (0.38, 0.22, 0.12), 0.5), bump=0.25),
+        rug=M("HK_Rug", (0.12, 0.2, 0.26), 0.95, kind="carpet", color2=(0.08, 0.13, 0.17), scale=2.0, tile=(0.6, 0.006, (0.3, 0.26, 0.18)), bump=0.25),
+        rug_warm=M("HK_RugWarm", (0.62, 0.52, 0.4), 0.95, kind="carpet", color2=(0.5, 0.4, 0.3), scale=2.5, bump=0.3),
         wallpaper=M("HK_Wallpaper", (0.72, 0.64, 0.5), 0.8, kind="wallpaper", color2=(0.66, 0.57, 0.43), bump=0.05),
         velvet=M("HK_Velvet", (0.05, 0.24, 0.26), 0.92, var=0.1, bump=0.2),
         mustard=M("HK_Mustard", (0.55, 0.37, 0.1), 0.9, var=0.1, bump=0.2),
@@ -103,7 +109,7 @@ def palette():
         soil=M("HK_Soil", (0.09, 0.06, 0.04), 0.95),
         concrete=M("HK_Concrete", (0.55, 0.54, 0.52), 0.9, kind="plaster", var=0.08, bump=0.15),
         stairpaint=M("HK_StairPaint", (0.78, 0.77, 0.72), 0.85, var=0.03),
-        stone=M("HK_Limestone", (0.76, 0.7, 0.6), 0.85, kind="plaster", color2=(0.66, 0.6, 0.5), scale=0.5, tile=(0.9, 0.006, (0.58, 0.53, 0.46)), bump=0.1),
+        stone=M("HK_Limestone", (0.64, 0.58, 0.49), 0.85, kind="plaster", color2=(0.55, 0.49, 0.41), scale=0.5, tile=(0.9, 0.008, (0.42, 0.38, 0.33)), bump=0.12),
         brick=M("HK_Brick", (0.45, 0.2, 0.14), 0.9, color2=(0.32, 0.14, 0.1), var=0.15, tile=(0.2, 0.01, (0.6, 0.57, 0.52), 0.5), bump=0.2),
         render_grey=M("HK_RenderGrey", (0.52, 0.52, 0.5), 0.9, kind="plaster", var=0.05),
         glass=M("HK_Glass", (0.6, 0.7, 0.72), 0.05, alpha=0.18, var=0.0, bump=0.0),
@@ -119,7 +125,7 @@ def palette():
         sign_red=M("HK_SignRed", (0.75, 0.08, 0.06), 0.5, var=0.02),
         canvas=M("HK_Canvas", (0.55, 0.4, 0.28), 0.8, kind="marble", color2=(0.16, 0.22, 0.3), scale=0.6, var=0.2, bump=0.1),
         mirror=M("HK_Mirror", (0.85, 0.87, 0.88), 0.05, metal=1.0, var=0.0, bump=0.0),
-        night_city=M("HK_NightCity", (0.02, 0.03, 0.07), 0.9, var=0.0, bump=0.0, tile=(0.6, 0.35, (0.03, 0.04, 0.09))),
+        night_city=M("HK_NightCity", (0.03, 0.04, 0.09), 0.9, var=0.05, bump=0.0, emit=0.3),
         green_shop=M("HK_ShopGreen", (0.12, 0.38, 0.16), 0.7, var=0.05),
         fabric_white=M("HK_Linen", (0.9, 0.88, 0.84), 0.9, var=0.03, bump=0.1),
     )
@@ -196,6 +202,7 @@ def facing_rot(n):
 
 def light(name, kind, loc, energy, color=(1.0, 0.85, 0.65), size=0.2, aim=None, c=None):
     L = bpy.data.lights.new(name, kind); L.energy = energy; L.color = color
+    L.use_shadow = any(k in name for k in SHADOW_LIGHTS)                     # shortcut: fills skip shadows (render time); add names to SHADOW_LIGHTS for more
     if kind == "AREA": L.size = size
     else: L.shadow_soft_size = size
     o = bpy.data.objects.new(name, L); (c or bpy.context.scene.collection).objects.link(o); o.location = loc
@@ -597,7 +604,12 @@ def grand_aurelia(floors=9, corridor_floors=(4, 9)):
               dict(s=None, n=[(-1.5, 1.5, 2.6)], e=[], w=[]), trim=trimC, c=su)                  # south = corridor end wall
     mb.box((-1.5, 14.0, z), (1.5, 14.25, z + 0.4), P["plaster"]); mb.box((-1.5, 14.0, z + 0.4), (1.5, 14.05, z + 2.6), P["glass"])
     mb.box((-12, 17.0, z - 12), (12, 17.1, z + 12), P["night_city"])
-    mb.box((-3.6, 7.6, z), (3.6, 13.6, z + 0.01), P["rug"]); mb.done()
+    import random
+    rr = random.Random(9)
+    for k in range(70):                                                              # lit windows of the city at night
+        x, zz = rr.uniform(-11, 11), z + rr.uniform(-10, 9)
+        mb.box((x, 16.95, zz), (x + 0.5, 17.0, zz + 0.7), P["winlit"])
+    mb.box((-2.6, 8.2, z), (2.6, 12.6, z + 0.01), P["rug_warm"]); mb.done()
     light("LGT_suite_lamp", "POINT", (-1.7, 13.0, z + 1.3), 60, (1.0, 0.75, 0.45), 0.15, c=su)
     light("LGT_suite_fill", "AREA", (0, 10.5, z + 2.9), 70, (1.0, 0.85, 0.65), 3.0, aim=(0, 10.5, z), c=su)
 
@@ -767,20 +779,20 @@ def check_routes(min_clear=0.3):
     return bad
 
 
-def eevee_quality(sc=None, samples=16):
+def eevee_quality(sc=None, samples=12, raytrace=True, shadow_scale=0.5):
     """EEVEE settings the kit is lit for: ray-traced reflections, fast GI / AO, soft shadows with enough rays for
     contact shadows, AgX with a little contrast. Every setting is optional across Blender versions."""
     sc = sc or bpy.context.scene; ee = sc.eevee
     items = [e.identifier for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items]
     sc.render.engine = next(e for e in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE") if e in items)
-    for attr, val in (("taa_render_samples", samples), ("use_raytracing", True), ("ray_tracing_method", "SCREEN"),
+    for attr, val in (("taa_render_samples", samples), ("use_raytracing", raytrace), ("ray_tracing_method", "SCREEN"),
                       ("use_fast_gi", True), ("fast_gi_distance", 2.5), ("use_gtao", True), ("gtao_distance", 1.2),
                       ("use_shadows", True), ("shadow_ray_count", 2), ("shadow_step_count", 8), ("use_soft_shadows", True),
-                      ("shadow_resolution_scale", 1.0), ("use_volumetric_shadows", False)):
+                      ("shadow_resolution_scale", shadow_scale), ("use_volumetric_shadows", False)):
         try: setattr(ee, attr, val)
         except (AttributeError, TypeError): pass
     try:
-        ee.ray_tracing_options.resolution_scale = "2"; ee.ray_tracing_options.use_denoise = True
+        ee.ray_tracing_options.resolution_scale = "4"; ee.ray_tracing_options.use_denoise = True
     except (AttributeError, TypeError): pass
     sc.view_settings.view_transform = "AgX"
     try: sc.view_settings.look = "AgX - Medium High Contrast"

@@ -1,7 +1,7 @@
 """Hotel environment preview: builds tools/hotelkit.py's Grand Aurelia alone, checks the walking routes, and
 renders review stills (exterior, lobby both ways, desk, elevators, stairwell, corridor 404, suite, overhead).
   rm -f projects/hotel/preview.blend; $PY tools/bl.py run projects/hotel/preview.py --blend projects/hotel/preview.blend --save
-  STILLS=1 ... renders projects/hotel/stills/<name>.png (432x768, 16 samples)"""
+  STILLS=1 ... renders projects/hotel/stills/<name>.png (432x768, production quality ~45 s each; Q=high is ~8x slower)"""
 import os, sys, bpy
 from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, os.path.join(HERE, "..", "..", "tools"))
@@ -9,7 +9,8 @@ import hotelkit as HK, camera as C
 sc = bpy.context.scene
 for o in list(bpy.data.objects): bpy.data.objects.remove(o)
 W = HK.grand_aurelia()
-HK.eevee_quality(sc, 16)
+Q = os.environ.get("Q", "")  # "fast": benchmark settings
+HK.eevee_quality(sc, *((8, False, 0.5) if Q == "fast" else (16, True, 1.0) if Q == "high" else ()))  # default = production (12 samples)
 sc.render.resolution_x, sc.render.resolution_y = 432, 768
 bad = HK.check_routes()
 print("ROUTES:", "all clear" if not bad else ""); [print("ROUTE PROBLEM:", b) for b in bad]
@@ -23,7 +24,7 @@ VIEWS = {  # name: (camera, aim, lens)
     "stairwell": ((-8.2, -0.9, 1.5), (-9.4, 3.0, 6.0), 18),
     "corridor404": ((0.0, -0.9, Z4 + 1.55), (0, 7.0, Z4 + 1.2), 22),
     "suite": ((-3.3, 7.9, Z9 + 1.6), (1.0, 12.5, Z9 + 0.9), 20),
-    "overhead": ((0.5, -2.0, 4.6), (0.3, -1.6, 0.0), 16),
+    "overhead": ((3.2, -4.8, 4.6), (1.0, -1.2, 0.0), 16),
 }
 for name, (p, a, lens) in VIEWS.items():
     p2 = HK.keep_inside(p, a)
