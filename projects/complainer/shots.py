@@ -41,7 +41,7 @@ shot(8.80, 10.45, "lobby", ("wide", "INF", "ots"),
 S[-1].update(cam_path=[(0, (0.28, 3.4, 1.72), (0.12, -0.6, 1.45), 30), (1.65, (0.26, 3.36, 1.72), (0.12, 0.2, 1.45), 30)], focus=[(0, "CLK"), (0.5, "INF")], fstop=2.4)
 shot(10.45, 12.00, "lobby", ("med", "F1", "34"), dict(DESK, INF=(0.1, 0.85, 180, "selfie")), props={"cart": "off"},
      note="Past his shoulder: the two friends working their phones - tap, re-frame, laugh")
-S[-1].update(cam_path=[(0, (-0.8, 1.3, 1.52), (0.2, -0.4, 1.42), 24), (1.55, (-0.72, 1.28, 1.52), (0.3, -0.4, 1.42), 24)], focus=[(0, "F1"), (0.85, "F2")], fstop=2.8)
+S[-1].update(cam_path=[(0, (-0.05, 1.9, 1.85), (0.0, -0.35, 1.35), 18), (1.55, (0.05, 1.88, 1.85), (0.0, -0.35, 1.35), 18)], focus=[(0, "F1"), (0.85, "F2")], fstop=2.8)
 shot(12.00, 13.80, "lobby", ("insert", "cart", "low"), dict(DESK, INF=(0.1, 0.85, 180, "selfie")), props={"cart": (-2.3, 0.6), "cart_from": (-2.3, -0.3)},
      note="Reveal: luggage wheels roll to a stop, the camera cranes up and back - fourteen suitcases")
 S[-1].update(cam_path=[(0, (-1.4, -0.45, 0.16), (-1.8, 0.36, 0.06), 28), (0.55, (-1.4, -0.45, 0.17), (-1.8, 0.36, 0.08), 28),

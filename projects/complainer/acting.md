@@ -9,7 +9,7 @@
 | 2 | F1 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone | 0.80s accent adjust_phone |
 | 2 | F2 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone | 0.64s accent adjust_phone |
 | 3 | INF | let us in on the trick, then hunt for something to complain about | sarcastic | primary | 0.0s point, 0.9s point, 1.2s point, 1.6s point | 0.05s accent lean_in; 0.90s react confused; 1.55s react sarcastic; 1.60s accent nod |
-| 4 | INF | produce the problem he brought himself | sarcastic | listener | 0.0s self:wrist.R, 2.3s point | 0.70s pose show_box_R; 2.25s accent scoff |
+| 4 | INF | produce the problem he brought himself | sarcastic | listener | 0.0s self:wrist.R, 2.3s point | 0.30s pose show_box_R; 2.25s accent scoff |
 | 5 | CLK | welcome guests - then clock the phones | neutral | primary | 0.0s INF, 0.8s F1, 1.2s INF | 0.30s accent take; 1.10s react annoyed |
 | 5 | INF | own the lobby for the stream | arrogant | primary | 0.0s self:phone, 1.0s CLK |  |
 | 5 | F1 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone, 0.8s INF, 1.7s self:phone | 0.90s accent phone_tap |

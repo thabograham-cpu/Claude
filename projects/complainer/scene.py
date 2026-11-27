@@ -161,7 +161,7 @@ for n in ("INF", "F1", "F2"):                                                   
     up = (Vector((0, 0, 1)) - n_ * n_.z).normalized()                                 # phone: -Y = screen (to the eyes), Z = long axis
     ph = HK.phone(n, sc.collection, PAL); attach(ph, r, "wrist.R", frame_from(pos, (-n_).cross(up), -n_, up)); PHONES[n] = ph
 s4 = next(x for x in S if x.get("insert_on"))
-f0, f1 = frames_of(s4); fa = f0 + round(1.2 * FPS)
+f0, f1 = frames_of(s4); fa = f0 + round(0.9 * FPS)
 sc.frame_set(fa); r = RIGS["INF"]; pb = r.pose.bones["wrist.R"]
 palm = r.matrix_world @ pb.tail + (r.matrix_world.to_3x3() @ (pb.tail - pb.head)).normalized() * 0.02 + Vector((0, 0, 0.035))
 face_dir = (r.matrix_world.to_3x3() @ Vector((0, -1, 0))).normalized()                # his front; the box label faces it

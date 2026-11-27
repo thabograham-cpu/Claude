@@ -33,7 +33,7 @@ d(3, "INF", "let us in on the trick, then hunt for something to complain about",
   [(0, (0.0, -2.65, 1.6)), (0.95, (-0.7, -2.3, 2.1)), (1.25, (0.9, -2.4, 1.35)), (1.55, (0.25, -2.3, 2.5))],   # eye level and up, within ~35 deg of his front: a close-up must keep the face
   [(0.05, "accent", "lean_in"), (0.9, "react", "confused"), (1.55, "react", "sarcastic"), (1.6, "accent", "nod")])
 d(4, "INF", "produce the problem he brought himself", "sarcastic", [(0, "self:wrist.R"), (2.3, (0.95, -2.85, 1.6))],
-  [(0.7, "pose", "show_box_R"), (2.25, "accent", "scoff")], pose="pocket_R")
+  [(0.3, "pose", "show_box_R"), (2.25, "accent", "scoff")], pose="pocket_R")   # out of the pocket at once: the insert is about the box
 d(5, "CLK", "welcome guests - then clock the phones", "neutral", [(0, "INF"), (0.85, "F1"), (1.25, "INF")],
   [(0.3, "accent", "take"), (1.1, "react", "annoyed")], role="primary")
 d(5, "INF", "own the lobby for the stream", "arrogant", [(0, "self:phone"), (1.0, "CLK")])
