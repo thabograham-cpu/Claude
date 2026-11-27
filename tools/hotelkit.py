@@ -907,3 +907,88 @@ def phone(name, c=None, P=None, screen=(0.55, 0.75, 1.0)):
     mb.box((-0.037, -0.004, -0.076), (0.037, 0.004, 0.076), P["black"]); mb.box((-0.034, -0.0045, -0.072), (0.034, -0.004, 0.072), scr)
     mb.box((0.008, 0.004, 0.045), (0.032, 0.0065, 0.07), P["black"]); mb.cyl((0.02, 0.0068, 0.058), 0.006, 0.002, P["steel"], axis="Y", seg=12)
     return mb.done(bevel=0.003)
+
+
+# ---------------------------------------------------------------- lighting looks (reference: Do Your Job.mp4)
+# Measured on the reference (24 frames): mean luminance 0.39, 5-95% spread 0.67, saturation 0.36, warm highlights
+# (R-B +0.07), slightly cool shadows, ~6% of pixels in deep shadow, ~1% clipped. The first hotel lighting measured
+# 0.54 / 0.58 / 0.24 / neutral / 0.1% deep: too bright, flat, pale. Causes: big shadowless fills, over-bright
+# floor/walls bouncing light everywhere, no motivated key, no grade.
+LOOKS = {
+    # sun: strength, elevation, azimuth (deg from south toward east); windows: daylight panels at the glass (W per 4.6 m)
+    "daylight": dict(sun=(5.0, 30, 18), sky=0.12, windows=380, chandelier=520, pendant=110, sconce=30, lamp=34,
+                     exposure=-0.3, look="AgX - Medium High Contrast", sat=1.04, lift=(1.0, 1.0, 1.015), gain=(1.07, 1.0, 0.92)),
+    "interior": dict(sun=(2.2, 36, 25), sky=0.08, windows=160, chandelier=950, pendant=190, sconce=60, lamp=50,
+                     exposure=-0.15, look="AgX - Medium High Contrast", sat=1.02, lift=(1.0, 1.0, 1.015), gain=(1.08, 1.0, 0.9)),
+    "cinematic": dict(sun=(4.2, 32, 20), sky=0.1, windows=280, chandelier=720, pendant=150, sconce=42, lamp=40,
+                      exposure=-0.25, look="AgX - High Contrast", sat=1.0, lift=(1.0, 1.0, 1.02), gain=(1.11, 1.01, 0.88), sun_color=(1.0, 0.88, 0.72)),
+}
+REFLECTANCE = {"HK_Marble": ((0.74, 0.7, 0.63), (0.48, 0.44, 0.4)), "HK_Plaster": ((0.7, 0.64, 0.55), None),
+               "HK_PlasterCool": ((0.64, 0.63, 0.6), None), "HK_Ceiling": ((0.72, 0.7, 0.66), None),
+               "HK_StairPaint": ((0.66, 0.65, 0.61), None), "HK_Limestone": ((0.6, 0.54, 0.45), None)}
+
+
+def lighting(look="cinematic", sc=None):
+    """Rebuild the hotel's light: motivated sources only (sun + cool window daylight against warm practicals),
+    every light casts shadows, the big shadowless fills go, surfaces get plausible reflectance, the world is a
+    faint cool sky, AO/GI and contact shadows are on, AgX contrast + exposure, and a subtle grade (warm gain,
+    cool lift, a touch of saturation). Idempotent; call after grand_aurelia()."""
+    L = LOOKS[look]; sc = sc or bpy.context.scene
+    for name in ("LGT_lobby_fill", "LGT_desk_fill", "LGT_elev_lobby"):                  # flat fills -> gone
+        if name in bpy.data.objects: bpy.data.objects[name].data.energy = 0.0; bpy.data.objects[name].hide_render = True
+    for m, (c1, c2) in REFLECTANCE.items():                                             # white surfaces at ~45-55% reflectance
+        mm = bpy.data.materials.get(m)
+        if not mm: continue
+        els = next(n for n in mm.node_tree.nodes if n.type == "VALTORGB").color_ramp.elements
+        if c2 is not None:                                                              # marble: base stops vs the vein stop
+            dark = min(els, key=lambda e: sum(e.color[:3]))
+            for e in els: e.color = _rgb(c2) if e == dark else _rgb(c1)
+        else:                                                                           # plain surfaces: slight variation
+            els[0].color = _rgb(tuple(x * 0.92 for x in c1)); els[-1].color = _rgb(c1)
+        mm.diffuse_color = _rgb(c1)
+    for m, k in (("HK_WarmLight", 3.0), ("HK_WindowLit", 0.8), ("HK_CoolLight", 2.5)):     # practicals glow, never bloom
+        mm = bpy.data.materials.get(m)
+        if mm: mm.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"].default_value = k
+    for o in bpy.data.objects:                                                          # practicals: warm, shadowed, softer
+        if o.type != "LIGHT": continue
+        d = o.data; n = o.name
+        if "chandelier" in n: d.energy, d.shadow_soft_size = L["chandelier"], 0.6
+        elif "pendant" in n: d.energy = L["pendant"]
+        elif "sconce" in n: d.energy = L["sconce"]
+        elif "lamp" in n: d.energy = L["lamp"]
+        d.use_shadow = any(k in n for k in ("chandelier", "pendant", "sconce", "lamp", "window", "car_"))   # shadow budget: lobby lights only
+        if d.type != "SUN": d.color = (1.0, 0.74, 0.47) if any(k in n for k in ("chandelier", "pendant", "sconce", "lamp", "canopy", "street", "suite")) else d.color
+    s, elev, azim = L["sun"]; sun = bpy.data.objects["SUN"]                              # key: low sun through the entrance glass
+    sun.data.energy = s; sun.data.angle = math.radians(2.2); sun.data.color = L.get("sun_color", (1.0, 0.93, 0.82)); sun.data.use_shadow = True
+    sun.rotation_euler = Euler((math.radians(90 - elev), 0, math.radians(azim)))
+    lob = _COLL.get("HOTEL_lights") or bpy.context.scene.collection                       # cool daylight spilling through the storefront
+    for k, (x0, x1) in enumerate(((-6.6, -2.0), (-1.5, 1.5), (2.0, 6.6))):
+        nm = f"LGT_window{k}"; o = bpy.data.objects.get(nm) or light(nm, "AREA", ((x0 + x1) / 2, -6.85, 2.5), 1, c=lob)
+        o.data.shape = "RECTANGLE"; o.data.size, o.data.size_y = x1 - x0, 3.6; o.rotation_euler = Euler((math.radians(-90), 0, 0))
+        o.data.energy = L["windows"] * (x1 - x0) / 4.6; o.data.color = (0.92, 0.95, 1.0); o.data.use_shadow = True
+        o.location = ((x0 + x1) / 2, -6.85, 2.5)
+    w = sc.world; bg = w.node_tree.nodes.get("Background"); bg.inputs["Strength"].default_value = L["sky"]
+    ee = sc.eevee                                                                       # AO / bounce / contact shadows
+    for attr, val in (("use_fast_gi", True), ("fast_gi_method", "GLOBAL_ILLUMINATION"), ("fast_gi_distance", 1.2), ("fast_gi_resolution", "2"),
+                      ("shadow_ray_count", 3), ("shadow_step_count", 12), ("shadow_resolution_scale", 1.0), ("use_shadows", True)):
+        try: setattr(ee, attr, val)
+        except (AttributeError, TypeError): pass
+    vs = sc.view_settings; vs.view_transform = "AgX"; vs.exposure = L["exposure"]
+    try: vs.look = L["look"]
+    except TypeError: vs.look = "AgX - Medium High Contrast"
+    _grade(sc, L["sat"], L["lift"], L["gain"])
+    return L
+
+
+def _grade(sc, sat, lift, gain):
+    """Compositor grade: lift (shadows) slightly cool, gain (highlights) slightly warm, a little saturation."""
+    ng = sc.compositing_node_group or bpy.data.node_groups.new("GRADE", "CompositorNodeTree"); sc.compositing_node_group = ng
+    ng.nodes.clear()
+    if not ng.interface.items_tree: ng.interface.new_socket("Image", in_out="OUTPUT", socket_type="NodeSocketColor")
+    rl = ng.nodes.new("CompositorNodeRLayers"); cb = ng.nodes.new("CompositorNodeColorBalance"); hs = ng.nodes.new("CompositorNodeHueSat")
+    out = ng.nodes.new("NodeGroupOutput")
+    for i in cb.inputs:
+        if i.type == "RGBA" and i.name == "Lift": i.default_value = (*lift, 1)
+        if i.type == "RGBA" and i.name == "Gain": i.default_value = (*gain, 1)
+    hs.inputs["Saturation"].default_value = sat
+    ng.links.new(rl.outputs["Image"], cb.inputs["Image"]); ng.links.new(cb.outputs[0], hs.inputs["Image"]); ng.links.new(hs.outputs[0], out.inputs[0])
