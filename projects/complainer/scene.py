@@ -8,15 +8,13 @@ from mathutils import Vector, Matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sb = runpy.run_path(os.path.join(HERE, "storyboard.py"), run_name="storyboard_lib")  # sets, cast, poses, shot_camera
-import look, camera as C, shotcraft as SC, acting as A, direction  # storyboard put HERE and tools/ on sys.path
+import look, camera as C, shotcraft as SC, acting as A, direction, hotelkit as HK  # storyboard put HERE and tools/ on sys.path
 
 S, RIGS, OBJ, POSES, pose, ORIGIN = (sb[k] for k in ("S", "RIGS", "OBJ", "POSES", "pose", "ORIGIN"))
 FPS, END_S = 24, float(os.environ.get("END_S", 20))
 sc = bpy.context.scene
 sc.render.fps = FPS; sc.frame_start, sc.frame_end = 1, round(END_S * FPS)
 look.eevee(sb, os.path.join(HERE, "frames", "f_"))
-look.area("LGT_StairsKey", (40.6, -1.5, 4.0), (40, 2.0, 1.5), 900, 4.0, (1.0, 0.93, 0.85))  # stairwell: 40 m from the lobby lights
-look.area("LGT_StairsTop", (40, 3.5, 5.6), (40, 2.0, 1.0), 500, 3.0, (0.9, 0.95, 1.0))
 bpy.data.objects["TXT_stamp"].hide_render = True; bpy.data.objects["TXT_tag"].data.body = ""
 for n in ("open_case", "roach_box", "roach"): OBJ[n].location = (0, -200, 0)
 
@@ -49,8 +47,8 @@ def spec_for(s, name, f0, f1):
     ahead = Matrix.Rotation(math.radians(face), 3, "Z") @ Vector((0, -2.0, 0))
 
     def where(v):  # set-local points -> world; cast not in this shot -> a point ahead of the actor
-        if isinstance(v, tuple): return (v[0] + o[0], v[1] + o[1], v[2])
-        if v in RIGS and v not in s["chars"]: return (o[0] + x + ahead.x, o[1] + y + ahead.y, 1.6)
+        if isinstance(v, tuple): return (v[0] + o[0], v[1] + o[1], v[2] + o[2])
+        if v in RIGS and v not in s["chars"]: return (o[0] + x + ahead.x, o[1] + y + ahead.y, o[2] + 1.6)
         return v
     sp["look"] = [(t, where(v)) for t, v in sp.get("look", [])] or (
         [(0, s["cam"][1])] if s["cam"][1] in s["chars"] and s["cam"][1] != name else [])
@@ -103,15 +101,18 @@ for s in S:
         frames = list(range(f0, f1, STEP)) + [f1] if walks else [f0, f1]
         for f in frames:
             pos = start + travel * ((f - f0) / max(1, f1 - f0))
-            pos.z = stand_z(set_, pos.y - o[1])
+            pos.z = o[2] + stand_z(set_, pos.y - o[1])
             key_place(name, f, pos, face)
         pose(name, RIGS[name], WALK.get(p, p))  # static pose for camera framing; acting keys come after placement
     for name, ph in PHONES.items():
         key_vis(ph, f0, name in s["chars"] and s["chars"][name][3].startswith(HANDHELD))
     key_vis(OBJ["small_box"], f0, s["props"].get("small_box") == "INF")
+    vip = sb["HOTEL"]["elevators"]["vip"]; HK.key_doors(vip, f0, 1.0)              # VIP doors: open, closing on elevator shots
+    if "VIP doors close" in s["note"] or "doors close on them" in s["note"]:
+        HK.key_doors(vip, f0 + (f1 - f0) // 3, 1.0); HK.key_doors(vip, f1, 0.0)
     for b in BAGS: key_vis(b, f0, s["props"].get("bags_on") == "CLK")
     cx, cy = s["props"].get("cart", (-2.2, 3.6)) if set_ == "lobby" else (0, -200)
-    OBJ["cart"].location = (o[0] + cx, o[1] + cy, 0); OBJ["cart"].keyframe_insert("location", frame=f0)
+    OBJ["cart"].location = (o[0] + cx, o[1] + cy, o[2]); OBJ["cart"].keyframe_insert("location", frame=f0)
 
     # camera: the storyboard's placement + move, framed on the shot's first frame
     sc.frame_set(f0); bpy.context.view_layer.update()
