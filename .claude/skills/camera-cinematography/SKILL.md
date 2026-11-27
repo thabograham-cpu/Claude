@@ -154,6 +154,22 @@ for w in SC.camera_lint(rows) + SC.lint(records): print(w)
 `{"move": "hold"|"push"|"pull"|"dolly_in"|"dolly_out"|"truck_left"|"truck_right"|"pedestal_up"|"pedestal_down"|"pan_left"|"pan_right"|"tilt_up"|"tilt_down"|"orbit"|"arc"|"crane_up"|"crane_down"|"zoom_in"|"zoom_out"|"dolly_zoom"|"whip_pan"|"track"|"anticipate"|"follow"|"reveal", "amount": n, "subject": "NAME", "occluder": obj, "lead": 12, "delay": 0.2, "ease": "inout", "fstop": 2.0, "focus": "NAME", "follow_focus": "NAME", "rack_to": "NAME", "rack_at": 0.6, "handheld": 0.12}`.
 No `move` means an intentional hold.
 
+## Designed shots (`cam_path`) and close-ups - lessons from the Complainer remake
+Hand-directed shots in a `shots.py` entry:
+- `cam_path=[(t, cam_xyz, aim, lens), ...]` uses set-local keys with Bezier easing. `aim` is a point, or a cast name: the aim then **follows that character's eyes** every frame, with a 0.15 s operator lag.
+- `focus=[(t, target), ...]` racks over 0.35 s between targets (a cast name = the eyes, a point, or `"obj:NAME"`). `fstop` sets the depth of field.
+- `insert_on=(object, offset, lens)` places an insert camera on a prop at the moment it's presented.
+- `cam_at=(cam, aim)` places a static view, such as a building.
+- `pov:<rig>:<bone>` puts the camera at a character's eyes (`head`) or phone (`wrist.R`).
+
+What went wrong first time, and the fix:
+- **Aim close-ups at the eyes, never at the body's footprint.** At 60–75 mm a 1 m close-up frame is under 30 cm wide. Aiming at the rig origin put the face outside it.
+- **Close-up eye lines stay at eye level, within about 35° of the camera axis.** A look at the floor in a close-up shows the top of the head.
+- **Nothing between the camera and the subject.** A walker crossing a tracking shot, a big prop in a tight insert, or the subject's own back in an over-the-shoulder all bury the subject. Block the extras on the far side.
+- **Stair climbs: shoot from the steps above.** Use a low angle at tread height, backing up as the character climbs. A side view from inside a narrow well is all luggage and handrail.
+- **For vertigo, use the stairwell POV straight up a wide well** (0.7 m or more): a strong closing beat.
+- **Keep the focal length constant inside a reveal.** Dolly or crane instead (the lint flags zooms over ×1.35).
+
 ## Lens guide (vertical 9:16, sensor fit VERTICAL)
 | Feel | Focal | Notes |
 |------|-------|-------|

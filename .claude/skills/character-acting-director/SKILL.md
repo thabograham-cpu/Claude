@@ -131,6 +131,15 @@ Project poses still work through `poser(rig, name)`; the Complainer uses the sto
    - For new presets, render the preset gallery (`MODE=gallery` in `projects/actingtest/actingtest.py`).
 6. **Speakers.** Call `lipsync.apply(rig, track, body=False)` *after* `perform`, so the mouth wins. Pass the tracks to `perform(speech=...)` so spoken nods and word beats join the body.
 
+## Props, hands and feet (production lessons)
+- **Props ride bones.** Parent with `parent_type="BONE"` while keeping the world matrix at a posed frame (`attach()` in `projects/complainer/scene.py`). Phones are oriented so the screen faces the holder's eyes; a bug box sits on a `cup` hand. A carried load hangs from the wrists, straps to `spine02`, and sits under the arms (`upperarm02`), so nothing floats.
+- **Never hang a prop from the `head` bone** if the character will look up or react: it swings with the head and covers the face.
+- **Feet on stairs: `acting.foot_ik(rig, f0, f1, plants)`.**
+  - One plant per tread (frame, side, world point). Swings get a 14 cm lift.
+  - Knees aim at poles in front of the rig. IK influence is keyed only inside the shot.
+  - The body follows a smooth ramp; the IK makes the contact.
+- **Hand shapes:** add `cup` (an object on the palm) to `relaxed`, `open`, `fist`, `point` and `grip`. New poses: `carry_two`, `show_box_R`, `pocket_R`, `point_side_R`. New accent: `phone_tap`.
+
 ## Checks
 - **Gallery** (`projects/actingtest/gallery`): each preset reads from the silhouette alone at medium-shot size.
 - **IK contact poses:**
