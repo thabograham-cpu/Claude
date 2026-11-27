@@ -10,25 +10,27 @@ move: camera move applied over the shot by tools/camera.py apply() - see MOVES a
 S = []
 
 
-def shot(t0, t1, set_, cam, chars=None, props=None, card=None, note=""):
-    S.append(dict(id=len(S) + 1, t0=t0, t1=t1, set=set_, cam=cam, chars=chars or {}, props=props or {}, card=card, note=note))
+def shot(t0, t1, set_, cam, chars=None, props=None, card=None, note="", cam_at=None):
+    """cam_at: optional explicit ((x, y, z) camera, (x, y, z) aim) in set-local coordinates."""
+    S.append(dict(id=len(S) + 1, t0=t0, t1=t1, set=set_, cam=cam, chars=chars or {}, props=props or {}, card=card, note=note, cam_at=cam_at))
 
 
 # --- intro ---
-shot(0.00, 2.00, "lobby", ("wide", "INF", "low"), {"INF": (0, -3.5, 0, "selfie_walk"), "F1": (-1.2, -4.6, 0, "film"), "F2": (1.2, -4.6, 0, "film")}, note="He struts into a five-star lobby, phone up")
-shot(2.00, 3.50, "lobby", ("cu", "INF", "34"), {"INF": (0, -3.5, 0, "selfie")}, note="Smug to his own camera: 'for free'")
-shot(3.50, 4.90, "lobby", ("ecu", "INF", "front"), {"INF": (0, -3.5, 0, "selfie")}, note="'His trick?' - slow push, smirk")
-shot(4.90, 6.20, "lobby", ("med", "INF", "34"), {"INF": (0, -3.5, 0, "point_fwd"), "F1": (-0.9, -4.4, 20, "film")}, note="Points at a 'problem' while being filmed")
-shot(6.20, 8.30, "lobby", ("insert", "small_box", "34"), {"INF": (0, -3.5, 0, "show_box")}, props={"small_box": "INF"}, note="'...he brings one' - pulls a little box from his pocket")
+shot(0.00, 2.00, "street", ("wide", "canopy", "front"), {"INF": (0, -1.4, 180, "selfie_walk"), "F1": (-1.1, -1.7, 180, "film"), "F2": (1.1, -1.7, 180, "film")}, note="Establishing: he struts off the street under the canopy into a five-star hotel, phone up",
+     cam_at=((3.2, -7.5, 1.0), (-0.2, 2.2, 3.4)))
+shot(2.00, 3.50, "lobby", ("cu", "INF", "pov:INF:wrist.R"), {"INF": (0, -3.5, 0, "selfie")}, note="His phone's POV: smug to his own stream, 'for free'")
+shot(3.50, 5.30, "lobby", ("ecu", "INF", "front"), {"INF": (0, -3.5, 0, "selfie")}, note="'His trick?' - slow push, smirk; holds into the next line")
+shot(5.30, 6.20, "lobby", ("med", "INF", "34"), {"INF": (0, -3.5, 0, "point_fwd"), "F1": (-0.9, -4.4, 20, "film")}, note="Points at a 'problem' while being filmed")
+shot(6.20, 9.10, "lobby", ("insert", "small_box", "34"), {"INF": (0, -3.5, 0, "show_box")}, props={"small_box": "INF"}, note="'...he brings one' - pulls a little box from his pocket")
 # --- arrival ---
-shot(8.30, 10.60, "lobby", ("wide", "CLK", "ots"), {"CLK": (0, 2.6, 0, "stand"), "INF": (0, -2.5, 0, "selfie_walk"), "F1": (-1.2, -3.4, 0, "film"), "F2": (1.2, -3.4, 0, "film")}, note="Over the clerk's shoulder: they walk in livestreaming")
+shot(9.10, 10.60, "lobby", ("wide", "CLK", "ots"), {"CLK": (0, 2.6, 0, "stand"), "INF": (0, -2.5, 0, "selfie_walk"), "F1": (-1.2, -3.4, 0, "film"), "F2": (1.2, -3.4, 0, "film")}, note="Over the clerk's shoulder: they walk in livestreaming")
 shot(10.60, 12.20, "lobby", ("med", "F1", "front"), {"F1": (-0.6, -2.5, 0, "film_walk"), "F2": (0.6, -2.7, 0, "film_walk")}, note="Two friends, phones up")
-shot(12.20, 14.40, "lobby", ("wide", "cart", "34"), {"INF": (1.8, -1.6, -30, "stand")}, props={"cart": (0, -2.0)}, note="...and 14 suitcases on a brass cart")
+shot(12.20, 14.40, "lobby", ("wide", "cart", "34"), {"INF": (1.8, -1.6, -30, "stand")}, props={"cart": (0, -2.0), "cart_from": (-1.0, -5.0)}, note="...and 14 suitcases: the brass trolley rolls in")
 shot(14.40, 16.30, "lobby", ("med", "INF", "ots"), {"INF": (0, 0.95, 180, "snap"), "CLK": (0, 2.6, 0, "stand")}, note="'Desk boy, bags' - snaps at the clerk, over the clerk's shoulder")
 shot(16.30, 17.40, "lobby", ("med", "INF", "side"), {"INF": (0, 0.95, 180, "point_up"), "CLK": (0, 2.6, 0, "stand")}, note="'Ninth floor' - points up, in profile across the desk")
-shot(17.40, 18.20, "lobby", ("med", "INF", "front"), {"INF": (11.65, 2.5, -90, "selfie"), "F1": (11.1, 2.0, -90, "film"), "F2": (11.1, 3.0, -90, "film")}, note="'Elevators for VIPs' - inside the VIP car, the brass doors close on them")
-shot(18.20, 19.30, "lobby", ("cu", "CLK", "front"), {"CLK": (0, 2.6, 0, "stand")}, props={"cart": (-1.4, 1.2)}, note="The clerk takes in 14 bags and nine floors: disbelief before the climb")
-shot(19.30, 21.90, "stairs", ("wide", "CLK", "back"), {"CLK": (0, 1.2, 180, "carry_climb")}, props={"bags_on": "CLK"}, note="Clerk hauls 14 bags up nine floors - floor sign")
+shot(17.40, 18.20, "lobby", ("wide", "INF", "front"), {"INF": (11.65, 2.5, -90, "selfie"), "F1": (11.1, 2.0, -90, "film"), "F2": (11.1, 3.0, -90, "film")}, note="'Elevators for VIPs' - inside the VIP car, the brass doors close on them")
+shot(18.20, 19.35, "lobby", ("cu", "CLK", "front"), {"CLK": (0, 2.6, 0, "stand")}, props={"cart": (-1.4, 1.2)}, note="The clerk takes in 14 bags and nine floors: disbelief before the climb")
+shot(19.35, 21.90, "stairs", ("wide", "CLK", "back"), {"CLK": (0, 1.2, 180, "carry_climb")}, props={"bags_on": "CLK"}, note="Clerk hauls 14 bags up nine floors - floor sign")
 shot(21.90, 24.80, "stairs", ("med", "CLK", "high"), {"CLK": (0, 2.4, 180, "carry_climb")}, props={"bags_on": "CLK"}, card="chat:human luggage cart", note="Live chat overlay: 'human luggage cart'")
 # --- the night ---
 shot(24.80, 26.40, "suite", ("wide", "lobster", "34"), note="Room service: the suite, lobster on the cart")
@@ -88,6 +90,7 @@ shot(132.60, 134.20, "hall", ("cu", "door404", "front"), props={"roach_on": "hal
 # camera moves (tools/camera.py apply): dolly_in/out, pan_left/right, tilt_up/down, orbit, crane_up/down,
 # zoom_in/out, dolly_zoom, whip_pan, follow; plus fstop/focus/rack_to/rack_at (DoF) and handheld
 MOVES = {
+    1: {"move": "dolly_in", "amount": 0.8},                               # establishing: follow him toward the doors
     3: {"move": "dolly_in", "amount": 0.25},                              # 'His trick?' slow push
     6: {"move": "dolly_in", "amount": 0.8, "fstop": 2.8, "focus": "INF"},  # they walk in, clerk soft in foreground
     8: {"move": "crane_up", "amount": 1.2},                               # reveal the 14 suitcases

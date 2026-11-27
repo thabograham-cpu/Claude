@@ -72,7 +72,7 @@ def group(name, objs):
 # One persistent hotel (tools/hotelkit.py): street, facade, lobby + desk, elevator lobby, stairwell up nine floors,
 # corridors on floors 4 and 9, suite 901, the pet store down the street. Shot coordinates stay set-local (ORIGIN).
 HOTEL = HK.grand_aurelia()
-OBJ["desk"] = HOTEL["obj"]["desk"]; OBJ["elevator"] = HOTEL["obj"]["elevator"]; OBJ["door404"] = HOTEL["obj"]["door404"]
+OBJ["canopy"] = bpy.data.objects["EXT_canopy"]; OBJ["desk"] = HOTEL["obj"]["desk"]; OBJ["elevator"] = HOTEL["obj"]["elevator"]; OBJ["door404"] = HOTEL["obj"]["door404"]
 L = "lobby"
 # bill on the desk
 bill = [box((0.35, 1.7, 1.17), (0.3, 0.4, 0.004), "fbfbf6", "SM_Bill", set_=L)]
@@ -226,6 +226,22 @@ def shot_camera(s, f0, f1):
         if subj == "elevator": front = Vector((-1, 0, 0)); subject_pt.z = 1.4
         dist = SC.distance_for(framing, lens) if framing == "wide" else SC.distance_for(None, lens, height=max(0.35, ext * 1.6))
     height = {"low": -0.45, "high": 0.9}.get(angle, 0.05) * (dist if framing != "wide" else 0.5)
+    if s.get("cam_at"):  # explicit placement (set-local camera point, aim point): establishing shots of buildings, specific views
+        o3 = ORIGIN[s["set"]]; (cp, ap) = s["cam_at"]
+        pos = Vector(cp) + Vector(o3); aim_pt = Vector(ap) + Vector(o3); info = {"clear": 1.0, "swung": 0}
+        rg = C.rig(f"S{s['id']:02d}", pos, aim_pt, lens); sc.camera = rg.cam
+        if s.get("move"): C.apply(rg, s["move"], f0, f1, {n: (RIGS[n], "head") for n in RIGS})
+        return rg, pos, aim_pt, hd, info
+    if angle.startswith("pov:"):  # a character's point of view: camera at <rig>:<bone> (eyes "head", phone "wrist.R"), aimed at the subject
+        _, holder, bone = angle.split(":"); hr = RIGS[holder]; pb = hr.pose.bones[bone]
+        src = hr.matrix_world @ (pb.tail if bone.startswith("wrist") else pb.head)
+        tgt = hd if hd is not None else subject_pt
+        pos = src + (tgt - src).normalized() * (0.1 if bone.startswith("wrist") else 0.18); info = {"clear": 1.0, "swung": 0}
+        lens = 24 if bone.startswith("wrist") else lens   # a phone camera is wide
+        aim_pt = tgt
+        rg = C.rig(f"S{s['id']:02d}", pos, aim_pt, lens); sc.camera = rg.cam
+        if s.get("move"): C.apply(rg, s["move"], f0, f1, {n: (RIGS[n], "head") for n in RIGS})
+        return rg, pos, aim_pt, hd, info
     if angle == "top":
         pos = subject_pt + Vector((0, -0.05, dist + 0.6)); info = {"clear": 1.0, "swung": 0}
     elif angle == "ots":  # over the clerk's shoulder toward the other character

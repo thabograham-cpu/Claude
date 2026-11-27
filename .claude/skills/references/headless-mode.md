@@ -51,4 +51,7 @@ BL=tools/bl.py   # in the thabograham-cpu/claude repo (run from the repo root)
 | `lipsync.py` | phoneme -> MPFB viseme lip sync, ARKit expressions, blinks, eyes, nods; speaker-only (`apply`) vs listener (`idle`); planner self-test `python3 tools/lipsync.py`; guide in the `lipsync-facial-animation` skill |
 | `acting.py` | character acting: per-frame body/face/eyes from a per-shot spec (intent, preset, look, beats); 2-bone arm IK pose library, 9 emotion presets, accents, filmer/listener behaviours, walk cycle, eye-line lint; self-test `python3 tools/acting.py`; guide in the `character-acting-director` skill |
 | `hotelkit.py` | modular hotel kit + the persistent Grand Aurelia (street, facade, lobby, desk, elevator lobby + VIP car, stairwell x9 floors, corridors, suite, pet store); procedural materials, practical + sun/sky lighting, `eevee_quality`, `ORIGIN` set frames, `keep_inside` camera containment, `check_routes`; guide in the `hotel-location-kit` skill |
+| `edit.py` | narration -> story beats, beat-sheet lint (enactment, joke holds, pacing, variety, sound sync), sfx cue compiler; self-test; guide in `narrative-editing-director` |
+| `sfx.py` | procedural sound effects + ambience beds, narration-ducked mixer; self-test |
+| `captions.py` | reference-style ASS captions (Montserrat ExtraBold, sentence case, face-avoiding, Shorts-safe); self-test |
 | `fonts/` | Press Start 2P (OFL) for caption burn-in via ffmpeg `ass=...:fontsdir=tools/fonts` |

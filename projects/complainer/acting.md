@@ -2,17 +2,17 @@
 
 | shot | who | intention | preset | role | look | beats |
 |---|---|---|---|---|---|---|
-| 1 | INF | make an entrance worth streaming | arrogant | primary | 0.0s self:phone | 1.20s accent scoff |
+| 1 | INF | make an entrance worth streaming | arrogant | listener | 0.0s self:phone | 1.20s accent scoff |
 | 1 | F1 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone | 0.81s accent adjust_phone |
 | 1 | F2 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone | 0.64s accent adjust_phone |
 | 2 | INF | brag to his followers that he never pays | arrogant | primary | 0.0s self:phone | 0.96s accent scoff |
 | 3 | INF | let the audience in on his trick | arrogant | primary | 0.0s self:phone | 0.30s accent lean_in; 0.64s accent nod |
-| 4 | INF | find something to complain about, on camera | arrogant | primary | 0.0s F1, 0.3s point | 0.58s pose point_fwd |
-| 4 | F1 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone, 0.8s INF, 1.7s self:phone | 0.70s accent nod |
+| 4 | INF | find something to complain about, on camera | arrogant | primary | 0.0s point | 0.18s pose point_fwd |
+| 4 | F1 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone | 0.40s accent nod |
 | 5 | INF | show off the 'problem' he brought himself | sarcastic | listener | 0.0s self:phone, 1.0s self:wrist.R, 1.7s point | 1.60s pose show_box |
-| 6 | CLK | welcome guests professionally - then clock the phones | neutral | listener | 0.0s INF, 1.4s F1, 1.8s INF | 0.60s accent nod; 1.60s react annoyed |
-| 6 | INF | own the lobby for the stream | arrogant | listener | 0.0s self:phone, 1.2s CLK, 1.7s self:phone |  |
-| 6 | F1 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone, 0.8s INF, 1.6s self:phone | 1.30s accent laugh |
+| 6 | CLK | welcome guests professionally - then clock the phones | neutral | listener | 0.0s INF, 0.6s F1, 1.0s INF | 0.20s accent nod; 0.90s react annoyed |
+| 6 | INF | own the lobby for the stream | arrogant | listener | 0.0s self:phone, 0.5s CLK, 1.0s self:phone |  |
+| 6 | F1 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone, 0.8s INF, 1.6s self:phone | 0.60s accent laugh |
 | 6 | F2 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone, 0.7s INF, 1.5s self:phone |  |
 | 7 | F1 | film INF: catch every moment for the stream | neutral | primary | 0.0s self:phone, 0.8s point, 1.6s self:phone |  |
 | 7 | F2 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone, 0.6s point, 1.4s self:phone | 0.80s accent laugh |

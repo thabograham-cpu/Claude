@@ -25,18 +25,18 @@ def film(shot, who, subject="INF", react=(), role="background"):
 # --- intro: performing for his own camera
 d(1, "INF", "make an entrance worth streaming", "arrogant", [(0, "self:phone")], [(1.2, "accent", "scoff")])
 film(1, "F1"); film(1, "F2")
-d(2, "INF", "brag to his followers that he never pays", "arrogant", [(0, "self:phone")], [(0.96, "accent", "scoff")])
+d(2, "INF", "brag to his followers that he never pays", "arrogant", [(0, "self:phone")], [(0.96, "accent", "scoff")], camera_ok=True)  # his phone IS the lens
 d(3, "INF", "let the audience in on his trick", "arrogant", [(0, "self:phone")], [(0.3, "accent", "lean_in"), (0.64, "accent", "nod")])
-d(4, "INF", "find something to complain about, on camera", "arrogant", [(0, "F1"), (0.3, (0.6, -5.6, 0.3))],
-  [(0.58, "pose", "point_fwd")], pose="stand")
-film(4, "F1", react=[(0.7, "nod")])
+d(4, "INF", "find something to complain about, on camera", "arrogant", [(0, (0.6, -5.6, 0.3))],
+  [(0.18, "pose", "point_fwd")], pose="stand")
+film(4, "F1", react=[(0.4, "nod")])
 d(5, "INF", "show off the 'problem' he brought himself", "sarcastic", [(0, "self:phone"), (1.0, "self:wrist.R"), (1.7, FRIENDS)],
   [(1.6, "pose", "show_box")], pose="stand")
 # --- arrival
-d(6, "CLK", "welcome guests professionally - then clock the phones", "neutral", [(0, "INF"), (1.4, "F1"), (1.8, "INF")],
-  [(0.6, "accent", "nod"), (1.6, "react", "annoyed")], role="listener")
-d(6, "INF", "own the lobby for the stream", "arrogant", [(0, "self:phone"), (1.2, "CLK"), (1.7, "self:phone")])
-film(6, "F1", react=[(1.3, "laugh")]); film(6, "F2")
+d(6, "CLK", "welcome guests professionally - then clock the phones", "neutral", [(0, "INF"), (0.6, "F1"), (1.0, "INF")],
+  [(0.2, "accent", "nod"), (0.9, "react", "annoyed")], role="listener")
+d(6, "INF", "own the lobby for the stream", "arrogant", [(0, "self:phone"), (0.5, "CLK"), (1.0, "self:phone")])
+film(6, "F1", react=[(0.6, "laugh")]); film(6, "F2")
 film(7, "F1", role="primary"); film(7, "F2", react=[(0.8, "laugh")])
 d(8, "INF", "present his fourteen suitcases like trophies", "arrogant", [(0, (0, -2.0, 0.9)), (1.3, FRIENDS)],
   [(0.5, "pose", "palm_up_R"), (1.6, "pose", "stand")], pose="stand")

@@ -4,3 +4,7 @@ scene.blend
 captions.ass
 *.mp4
 shotlist.md
+faces.json
+cues.json
+beds.json
+*_mix.wav

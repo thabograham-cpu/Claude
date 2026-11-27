@@ -2,7 +2,7 @@
 Build:  END_S=20 $PY tools/bl.py run projects/complainer/scene.py --blend projects/complainer/scene.blend --save
 Render: render_range.py workers on scene.blend -> frames/f_####.png; then python3 finish.py (labels, voice, captions).
 Each shot keys its own cast/props at its first frame and gets its own camera rig (bound by a timeline marker)."""
-import os, sys, math, runpy
+import os, sys, math, runpy, json
 import bpy
 from mathutils import Vector, Matrix
 
@@ -14,7 +14,8 @@ S, RIGS, OBJ, POSES, pose, ORIGIN = (sb[k] for k in ("S", "RIGS", "OBJ", "POSES"
 FPS, END_S = 24, float(os.environ.get("END_S", 20))
 sc = bpy.context.scene
 sc.render.fps = FPS; sc.frame_start, sc.frame_end = 1, round(END_S * FPS)
-look.eevee(sb, os.path.join(HERE, "frames", "f_"))
+RES = tuple(int(v) for v in os.environ.get("RES", "432x768").split("x"))            # DRAFT edit previews: RES=270x480 SAMPLES=6
+look.eevee(sb, os.path.join(HERE, "frames", "f_"), RES, int(os.environ.get("SAMPLES", 12)))
 bpy.data.objects["TXT_tag"].data.body = ""
 for n in ("open_case", "roach_box", "roach"): OBJ[n].location = (0, -200, 0)
 
@@ -116,10 +117,16 @@ for s in S:
     for b in BAGS: key_vis(b, f0, s["props"].get("bags_on") == "CLK")
     cx, cy = s["props"].get("cart", (-2.2, 3.6)) if set_ == "lobby" else (0, -200)
     OBJ["cart"].location = (o[0] + cx, o[1] + cy, o[2]); OBJ["cart"].keyframe_insert("location", frame=f0)
+    if "cart_from" in s["props"]:                                                    # the trolley rolls in and eases to a stop
+        (ax, ay), n_roll = s["props"]["cart_from"], round(1.1 * FPS)
+        for i in range(n_roll + 1):
+            u = 1 - (1 - i / n_roll) ** 3
+            OBJ["cart"].location = (o[0] + ax + (cx - ax) * u, o[1] + ay + (cy - ay) * u, o[2]); OBJ["cart"].keyframe_insert("location", frame=f0 + i)
 
     # camera: the storyboard's placement + move, framed on the shot's first frame
-    sc.frame_set(f0); bpy.context.view_layer.update()
+    sc.frame_set(f1 if "cart_from" in s["props"] else f0); bpy.context.view_layer.update()   # frame where the trolley comes to rest
     rg, cpos, aim, hd, info = sb["shot_camera"](s, f0, f1)
+    sc.frame_set(f0)
     subj = s["cam"][1]
     if walking and not s.get("move") and s["cam"][2] != "ots" and subj in s["chars"]:
         sc.frame_set(f1); end = RIGS[subj].location.copy(); sc.frame_set(f0)
@@ -127,7 +134,7 @@ for s in S:
     if subj in RIGS and not (s.get("move") or {}).get("fstop"):
         C.dof(rg, 2.8, RIGS[subj], "head")
     m = sc.timeline_markers.new(rg.cam.name, frame=f0); m.camera = rg.cam
-    cams.append((s["id"], f0, f1, info))
+    cams.append((s["id"], f0, f1, info, rg.cam))
     rows.append(dict(id=s["id"], f0=f0, f1=f1, type=f"{s['cam'][0]} {s['cam'][2]}", subject=subj, purpose=s["note"],
                      **C.describe(rg, f0, f1, subj if rg.cam.data.dof.use_dof else None)))
     print("SHOT", s["id"], f0, f1, info)
@@ -149,6 +156,22 @@ with open(os.path.join(HERE, "acting.md"), "w") as fh:
         bt = "; ".join(f"{t:.2f}s {k} {v}" for t, k, v in sorted(sp.get("beats", [])))
         fh.write(f"| {sid} | {n} | {sp['intent']} | {sp['preset']} | {sp['role']} | {lk} | {bt} |\n")
 for w in notes: print("EYELINE LINT:", w)
+
+# face boxes per frame (screen space, y down) so captions never sit on a face - tools/captions.py
+from bpy_extras.object_utils import world_to_camera_view
+faces = {}
+for sid, f0, f1, info, cam in cams:
+    s = next(x for x in S if x["id"] == sid)
+    for f in range(f0, f1 + 1, 2):
+        sc.frame_set(f); boxes = []
+        for n in s["chars"]:
+            r = RIGS[n]; h = r.matrix_world @ r.pose.bones["head"].head
+            pts = [world_to_camera_view(sc, cam, h + Vector(d)) for d in ((0, 0, 0.24), (0, 0, -0.14), (0.12, 0, 0.05), (-0.12, 0, 0.05), (0, 0.12, 0.05), (0, -0.12, 0.05))]
+            if all(p.z > 0 for p in pts):
+                xs, ys = [p.x for p in pts], [1 - p.y for p in pts]
+                if max(xs) > 0 and min(xs) < 1 and max(ys) > 0 and min(ys) < 1: boxes.append([round(min(xs), 3), round(min(ys), 3), round(max(xs), 3), round(max(ys), 3)])
+        for g in (f, f + 1): faces[str(g)] = boxes
+json.dump(faces, open(os.path.join(HERE, "faces.json"), "w"))
 
 # cast: linear walk paths, smooth limbs; props and visibility snap at the cuts
 for ob in list(RIGS.values()) + [OBJ["cart"], OBJ["small_box"], *PHONES.values(), *BAGS]:
