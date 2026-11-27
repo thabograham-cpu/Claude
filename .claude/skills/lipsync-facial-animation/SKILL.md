@@ -83,8 +83,10 @@ Keep dialogue in a file like `projects/facetest/dialogue.json`, one entry per li
   - Each phone is a Gaussian centred on its timing.
   - Closures dominate (M B P ×6, F V ×4), so lips meet even on 40 ms consonants.
   - H, K and G are "invisible": neighbouring vowels show through.
-- **Visual lead:** shapes lead the audio by `LEAD` = 50 ms.
+- **Visual lead:** shapes lead the audio by `LEAD` = 50 ms. Closures (M B P, F V) lead by only half that, so the lips are still shut when the sound starts. A 40 ms M with the full lead closes and reopens before the audio frame (found in the face test).
 - **Silence:** a pause of 120 ms or more ramps the mouth to rest over `RAMP` = 80 ms. Mouths close between phrases and after lines.
+- **Rest seal:** the MPFB rest pose has slightly parted lips. `REST` keys `mouthClose` 0.15 in silence (speakers and listeners). `mouthPress` and a low `p_b_m_21` did *not* seal them in render tests.
+- **Closures win over expression:** lip-raising units (`mouthUpperUp*`, `noseSneer*`, used by the angry preset) fade out in proportion to `p_b_m_21`, or the lips can't meet.
 - **Limits:**
   - each key ≤ 0.9;
   - sum of visemes ≤ 1.0;
@@ -112,6 +114,7 @@ Keep dialogue in a file like `projects/facetest/dialogue.json`, one entry per li
    - F and V tuck the lower lip;
    - the mouth is shut in pauses;
    - the listener's mouth never moves.
+   - Key values alone can mislead: a frame keyed at `p_b_m_21` 0.85 still rendered open while the angry lip-raise was on. Always check the render.
 4. Then wire it into a production scene: build its `dialogue.json` from the shot list and quotes, and call `apply` / `idle` per line.
 
 ## Constraints

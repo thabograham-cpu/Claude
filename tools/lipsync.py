@@ -54,7 +54,7 @@ SHAPE = {  # key: (peak, dominance, min width s)
 OPEN = {"aa_02", "aa_ah_ax_01", "ao_03", "ey_eh_uh_04", "ow_08", "er_05"}   # vowels whose openness loudness may scale
 # secondary lip/cheek units driven by the visemes (ARKit face units), small and capped
 SECONDARY = {
-    "p_b_m_21": {"mouthPressLeft": 0.25, "mouthPressRight": 0.25},
+    "p_b_m_21": {"mouthPressLeft": 0.25, "mouthPressRight": 0.25, "mouthClose": 0.15},
     "f_v_18": {"mouthRollLower": 0.3, "mouthUpperUpLeft": 0.1, "mouthUpperUpRight": 0.1},
     "w_uw_07": {"mouthPucker": 0.35, "mouthFunnel": 0.15}, "ow_08": {"mouthFunnel": 0.3},
     "sh_ch_jh_zh_16": {"mouthFunnel": 0.35},
@@ -81,6 +81,9 @@ EMOTION = {
                       gain=1.1, nod=1.0, tilt=0.0, accent={"browInnerUp": 0.2}),
 }
 BLINK = ("eyeBlinkLeft", "eyeBlinkRight")
+CLOSURES = ("p_b_m_21", "f_v_18")
+REST = {"mouthClose": 0.15}   # MPFB rest pose has parted lips: seal them when not speaking (press/p_b_m at low weight don't)
+LIP_RAISE = ("mouthUpperUpLeft", "mouthUpperUpRight", "noseSneerLeft", "noseSneerRight")  # would pull a closure apart
 
 
 # ---------------------------------------------------------------- pure-python planning
@@ -123,7 +126,10 @@ def mouth_at(t, units, env, loud=1.0, gain=1.0):
     num, den = {}, 1e-6
     for s, e, key, _ in units:
         peak, dom, wmin = SHAPE.get(key, (0.6, 1.0, 0.04))
-        c = (s + e) / 2 - LEAD; w = max(wmin, (e - s) * 0.55)
+        if key in CLOSURES:                                         # lips must still be shut when the sound starts
+            c = (s + e - LEAD) / 2; w = max(wmin, (e - s) * 0.55)
+        else:
+            c = (s + e) / 2 - LEAD; w = max(wmin, (e - s) * 0.55)
         if abs(t - c) > 4 * w: continue
         d = dom * math.exp(-((t - c) / w) ** 2)
         num[key] = num.get(key, 0.0) + d * peak; den += d
@@ -145,7 +151,7 @@ def plan(ph, emotion="neutral", fps=24, start=0.0, name="char", look=None):
     E = EMOTION[emotion]; phones, sil = ph["phones"], ph["silences"]; units = _units(phones)
     rms = ph.get("rms", []); hi = max(rms) if rms else 1.0
     f0 = int(math.floor(start * fps)) + 1; f1 = f0 + int(math.ceil(ph["duration"] * fps))
-    names = sorted(set(VISEMES) | {k for d in SECONDARY.values() for k in d} | set(E["face"]) | set(E["accent"]) | set(BLINK))
+    names = sorted(set(VISEMES) | {k for d in SECONDARY.values() for k in d} | set(E["face"]) | set(E["accent"]) | set(BLINK) | set(REST))
     keys = {k: [] for k in names}; nod, tilt, roll = [], [], []
     stressed = [((p["s"] + p["e"]) / 2, p["e"] - p["s"]) for p in phones if p.get("stress") == 1]
     accents = sorted({int(round((c - LEAD) * fps)) for c, _ in stressed})
@@ -156,6 +162,7 @@ def plan(ph, emotion="neutral", fps=24, start=0.0, name="char", look=None):
         m = mouth_at(t, units, env, loud, E["gain"])
         frame = {k: 0.0 for k in names}
         frame.update(m)
+        for k, a in REST.items(): frame[k] = frame.get(k, 0) + a * (1 - env)
         for vk, sec in SECONDARY.items():
             if vk in m:
                 for k, a in sec.items(): frame[k] = frame.get(k, 0) + a * m[vk] / SHAPE[vk][0]
@@ -170,6 +177,9 @@ def plan(ph, emotion="neutral", fps=24, start=0.0, name="char", look=None):
             v = t - (c - LEAD - 0.12)                                # neck dips just before the stressed vowel
             if 0 <= v < 0.45: head = max(head, math.sin(math.pi * v / 0.45))
         for k, a in E["accent"].items(): frame[k] = frame.get(k, 0) + a * acc
+        clo = m.get("p_b_m_21", 0.0) / SHAPE["p_b_m_21"][0]
+        for k in LIP_RAISE:
+            if k in frame: frame[k] *= 1 - clo
         roll.append(0.0)
         if E.get("eyeroll"):                                         # sarcasm: eyes roll up after the line
             r = t - (ph["duration"] - 0.25)
@@ -316,6 +326,7 @@ def idle(rig, f0, f1, emotion="neutral", look_at=None, intensity=0.6):
     """A LISTENER: no visemes, mouth relaxed shut; expression at reduced intensity, blinks, eyes, tiny nods."""
     bpy = _bpy(); body = prepare(rig); E = EMOTION[emotion]; n = f1 - f0 + 1
     chans = {k: [a * intensity] * n for k, a in E["face"].items()}
+    for k, a in REST.items(): chans[k] = [v + a for v in chans.get(k, [0.0] * n)]
     for v in VISEMES: chans.setdefault(v, [0.0] * n)                 # make sure no lip sync leaks onto a listener
     bl = blink_curve(blink_frames(rig.name, f0, f1), f0, f1)
     for k in BLINK: chans[k] = bl
@@ -336,6 +347,10 @@ def _selftest():
     assert at("p_b_m_21", 0.25 - LEAD) > 0.75, at("p_b_m_21", 0.25 - LEAD)          # lips close on M
     assert at("aa_02", 0.4 - LEAD) > 0.5 and at("p_b_m_21", 0.4 - LEAD) < 0.2       # open on AA
     assert at("p_b_m_21", 0.53 - LEAD) > 0.6                                          # short P still closes
+    assert at("p_b_m_21", 0.2) > 0.6 and at("p_b_m_21", 0.5) > 0.6                   # still shut at the sound onset
+    assert at("mouthClose", 0.9) > 0.12 and at("mouthClose", 0.4) < 0.03            # lips sealed only in silence
+    ang = plan(ph, "angry", fps=100)["keys"]
+    assert ang["mouthUpperUpLeft"][int(round((0.25 - LEAD) * 100))] < 0.03 < ang["mouthUpperUpLeft"][40]  # no lip raise on M
     assert at("f_v_18", 1.095 - LEAD) > 0.6 and at("w_uw_07", 1.22 - LEAD) > 0.45
     assert all(v < 0.02 for k in VISEMES if k in K for v in [at(k, 0.9)]), "mouth rests in the silence"
     assert all(at(k, 0.05) == 0 for k in VISEMES if k in K)
