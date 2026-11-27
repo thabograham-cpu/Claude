@@ -79,7 +79,7 @@ All three tools self-test with `python3 tools/<name>.py`.
    - Fixes misheard words ({"lean": "lien"}).
    - Captions run from just before the first word until the next caption, holding 0.6 s into pauses.
    - Face boxes per frame come from the scene build (`faces.json`, head projected through the shot camera). A caption stays at 74%; if a face is there it moves up to 64%, and to the top band (30%) only if both are covered. The reference keeps captions low, over a close-up's chest.
-  - Size: Montserrat ExtraBold 88 at 1080x1920 (a 14-character line spans ~70% of the width, as measured). A first pass at 64 read as half the reference size.
+  - Size: Montserrat ExtraBold 118 at 1080x1920, outline 4.2, shadow 2.4: letter height matched to the reference crop at the same scale (64 and then 88 both read too small).
    - Safe area: x 9–82%, y 12–80%.
 7. **Review a draft.** Render the cut at draft size (`RES=270x480 SAMPLES=6`), then `finish.py`. Watch for beats that don't play, jokes that don't land, effects that are too loud or too quiet, and captions on faces. Fix, then render at full quality.
 

@@ -17,8 +17,8 @@ Y_MAIN, Y_ALT = 0.74, 0.30          # caption centre (fraction of height): defau
 Y_TRY = (0.74, 0.64, 0.30)          # stay low like the reference; move up only as far as a face forces
 SAFE_X, SAFE_Y = (0.09, 0.82), (0.12, 0.80)
 MAX_WORDS, MAX_LINE, MAX_GAP = 3, 14, 0.35
-STYLE = ("Style: Cap,Montserrat ExtraBold,88,&H00FFFFFF,&H00FFFFFF,&H00141414,&H64000000,0,0,0,0,100,100,0,0,1,"
-         "3.4,2.0,5,40,40,40,1")   # ~70% of the width for a 14-character line, as measured on the reference
+STYLE = ("Style: Cap,Montserrat ExtraBold,118,&H00FFFFFF,&H00FFFFFF,&H00141414,&H64000000,0,0,0,0,100,100,0,0,1,"
+         "4.2,2.4,5,40,40,40,1")   # letter height matched to the reference at the same scale (1080 x 1920)
 
 
 def clean(w):
