@@ -24,10 +24,11 @@ shot(6.20, 8.30, "lobby", ("insert", "small_box", "34"), {"INF": (0, -3.5, 0, "s
 shot(8.30, 10.60, "lobby", ("wide", "CLK", "ots"), {"CLK": (0, 2.6, 0, "stand"), "INF": (0, -2.5, 0, "selfie_walk"), "F1": (-1.2, -3.4, 0, "film"), "F2": (1.2, -3.4, 0, "film")}, note="Over the clerk's shoulder: they walk in livestreaming")
 shot(10.60, 12.20, "lobby", ("med", "F1", "front"), {"F1": (-0.6, -2.5, 0, "film_walk"), "F2": (0.6, -2.7, 0, "film_walk")}, note="Two friends, phones up")
 shot(12.20, 14.40, "lobby", ("wide", "cart", "34"), {"INF": (1.8, -1.6, -30, "stand")}, props={"cart": (0, -2.0)}, note="...and 14 suitcases on a brass cart")
-shot(14.40, 16.30, "lobby", ("cu", "INF", "34"), {"INF": (0, 0.6, 0, "snap")}, note="'Desk boy, bags' - snaps fingers")
-shot(16.30, 17.40, "lobby", ("med", "INF", "low"), {"INF": (0, 0.6, 0, "point_up")}, note="'Ninth floor' - points up")
-shot(17.40, 18.80, "lobby", ("med", "elevator", "front"), {"INF": (6.3, 1.3, -90, "selfie"), "F1": (6.3, 0.6, -90, "film"), "F2": (6.3, 2.0, -90, "film")}, note="'Elevators for VIPs' - VIP doors close on them")
-shot(18.80, 21.90, "stairs", ("wide", "CLK", "back"), {"CLK": (0, 1.2, 180, "carry_climb")}, props={"bags_on": "CLK"}, note="Clerk hauls 14 bags up nine floors - floor sign")
+shot(14.40, 16.30, "lobby", ("med", "INF", "ots"), {"INF": (0, 0.95, 180, "snap"), "CLK": (0, 2.6, 0, "stand")}, note="'Desk boy, bags' - snaps at the clerk, over the clerk's shoulder")
+shot(16.30, 17.40, "lobby", ("med", "INF", "side"), {"INF": (0, 0.95, 180, "point_up"), "CLK": (0, 2.6, 0, "stand")}, note="'Ninth floor' - points up, in profile across the desk")
+shot(17.40, 18.20, "lobby", ("med", "elevator", "front"), {"INF": (6.3, 1.3, -90, "selfie"), "F1": (6.3, 0.6, -90, "film"), "F2": (6.3, 2.0, -90, "film")}, note="'Elevators for VIPs' - VIP doors close on them")
+shot(18.20, 19.30, "lobby", ("cu", "CLK", "front"), {"CLK": (0, 2.6, 0, "stand")}, props={"cart": (-1.4, 1.2)}, note="The clerk takes in 14 bags and nine floors: disbelief before the climb")
+shot(19.30, 21.90, "stairs", ("wide", "CLK", "back"), {"CLK": (0, 1.2, 180, "carry_climb")}, props={"bags_on": "CLK"}, note="Clerk hauls 14 bags up nine floors - floor sign")
 shot(21.90, 24.80, "stairs", ("med", "CLK", "high"), {"CLK": (0, 2.4, 180, "carry_climb")}, props={"bags_on": "CLK"}, card="chat:human luggage cart", note="Live chat overlay: 'human luggage cart'")
 # --- the night ---
 shot(24.80, 26.40, "suite", ("wide", "lobster", "34"), note="Room service: the suite, lobster on the cart")
@@ -90,23 +91,24 @@ MOVES = {
     3: {"move": "dolly_in", "amount": 0.25},                              # 'His trick?' slow push
     6: {"move": "dolly_in", "amount": 0.8, "fstop": 2.8, "focus": "INF"},  # they walk in, clerk soft in foreground
     8: {"move": "crane_up", "amount": 1.2},                               # reveal the 14 suitcases
-    12: {"move": "tilt_up", "amount": 12},                                # look up the stairwell
-    20: {"handheld": 0.8},                                                # fake panic for the stream
-    22: {"move": "zoom_in", "amount": 1.3, "handheld": 1.0},             # manager panics
-    27: {"move": "zoom_in", "amount": 1.8},                               # the hiss
-    33: {"move": "pan_left", "amount": 12},                               # leaving the pet store
-    34: {"move": "dolly_in", "amount": 1.0},                              # he strolls up
-    39: {"handheld": 0.5},                                                # laughing
-    40: {"fstop": 2.0, "focus": "INF", "rack_to": "CLK", "rack_at": 0.7},  # 'cry?' then focus snaps to the clerk
-    41: {"move": "dolly_in", "amount": 0.35},                             # slow push: the thing he didn't expect
-    46: {"move": "dolly_zoom", "amount": 1.8},                            # his face drops (vertigo)
-    47: {"fstop": 2.2, "focus": "INF", "rack_to": "F1", "rack_at": 0.6},  # lawyer on speaker, focus to the filming friend
-    52: {"move": "crane_up", "amount": 0.6},                              # robes reveal
-    55: {"move": "dolly_in", "amount": 0.15},                             # 'Then, I smiled'
-    57: {"move": "zoom_in", "amount": 1.4},                               # doors close in his face
-    58: {"move": "crane_down", "amount": 1.0},                            # carrying down the stairs
-    61: {"move": "dolly_in", "amount": 2.0},                              # down the corridor
-    62: {"move": "zoom_in", "amount": 1.5},                               # ROOM 404
+    12: {"move": "dolly_in", "amount": 0.12},                             # slow push on the clerk's disbelief
+    13: {"move": "tilt_up", "amount": 12},                                # look up the stairwell
+    21: {"handheld": 0.8},                                                # fake panic for the stream
+    23: {"move": "zoom_in", "amount": 1.3, "handheld": 1.0},             # manager panics
+    28: {"move": "zoom_in", "amount": 1.8},                               # the hiss
+    34: {"move": "pan_left", "amount": 12},                               # leaving the pet store
+    35: {"move": "dolly_in", "amount": 1.0},                              # he strolls up
+    40: {"handheld": 0.5},                                                # laughing
+    41: {"fstop": 2.0, "focus": "INF", "rack_to": "CLK", "rack_at": 0.7},  # 'cry?' then focus snaps to the clerk
+    42: {"move": "dolly_in", "amount": 0.35},                             # slow push: the thing he didn't expect
+    47: {"move": "dolly_zoom", "amount": 1.8},                            # his face drops (vertigo)
+    48: {"fstop": 2.2, "focus": "INF", "rack_to": "F1", "rack_at": 0.6},  # lawyer on speaker, focus to the filming friend
+    53: {"move": "crane_up", "amount": 0.6},                              # robes reveal
+    56: {"move": "dolly_in", "amount": 0.15},                             # 'Then, I smiled'
+    58: {"move": "zoom_in", "amount": 1.4},                               # doors close in his face
+    59: {"move": "crane_down", "amount": 1.0},                            # carrying down the stairs
+    62: {"move": "dolly_in", "amount": 2.0},                              # down the corridor
+    63: {"move": "zoom_in", "amount": 1.5},                               # ROOM 404
 }
 for _s in S:
     _s["move"] = MOVES.get(_s["id"])
@@ -114,5 +116,5 @@ assert all(any(x["id"] == k and x["set"] for x in S) for k in MOVES), "moves onl
 
 # lint notes accepted on purpose (shot id -> reason); storyboard.py reports them as accepted, not as warnings
 LINT_OK = {
-    33: "medium keeps his face AND the box in one frame - the story needs both",
+    34: "medium keeps his face AND the box in one frame - the story needs both",
 }

@@ -79,6 +79,27 @@ EMOTION = {
                       gain=0.75, nod=1.5, tilt=3.0, accent={"browInnerUp": 0.15}),
     "shocked":   dict(face={"browInnerUp": 0.7, "browOuterUpLeft": 0.6, "browOuterUpRight": 0.6, "eyeWideLeft": 0.6, "eyeWideRight": 0.6},
                       gain=1.1, nod=1.0, tilt=0.0, accent={"browInnerUp": 0.2}),
+    # acting presets (tools/acting.py): grounded adult comedy, so units stay at or below ~0.6
+    "arrogant":  dict(face={"mouthSmileLeft": 0.3, "mouthSmileRight": 0.12, "eyeSquintLeft": 0.15, "eyeSquintRight": 0.15,
+                            "eyeBlinkLeft": 0.1, "eyeBlinkRight": 0.1, "browOuterUpLeft": 0.2, "noseSneerLeft": 0.12, "mouthPressLeft": 0.15},
+                      gain=0.95, nod=2.0, tilt=3.0, accent={"browOuterUpLeft": 0.2, "browOuterUpRight": 0.1}),
+    "annoyed":   dict(face={"browDownLeft": 0.4, "browDownRight": 0.4, "eyeSquintLeft": 0.2, "eyeSquintRight": 0.2,
+                            "mouthPressLeft": 0.3, "mouthPressRight": 0.3, "mouthFrownLeft": 0.15, "mouthFrownRight": 0.15, "noseSneerRight": 0.1},
+                      gain=0.95, nod=2.5, tilt=0.0, accent={"browDownLeft": 0.15, "browDownRight": 0.15}),
+    "disbelief": dict(face={"browInnerUp": 0.5, "browOuterUpLeft": 0.45, "browOuterUpRight": 0.35, "eyeWideLeft": 0.25, "eyeWideRight": 0.25,
+                            "jawOpen": 0.12, "mouthShrugUpper": 0.1}, rest={},
+                      gain=0.9, nod=1.0, tilt=2.0, accent={"browInnerUp": 0.15}),
+    "embarrassed": dict(face={"browInnerUp": 0.4, "mouthSmileLeft": 0.2, "mouthSmileRight": 0.2, "mouthPressLeft": 0.2,
+                              "mouthPressRight": 0.2, "eyeLookDownLeft": 0.3, "eyeLookDownRight": 0.3, "cheekSquintLeft": 0.15, "cheekSquintRight": 0.15},
+                        gain=0.75, nod=1.5, tilt=3.0, accent={"browInnerUp": 0.1}),
+    "confused":  dict(face={"browInnerUp": 0.3, "browDownRight": 0.35, "browOuterUpLeft": 0.35, "eyeSquintRight": 0.2,
+                            "mouthLeft": 0.12, "mouthPucker": 0.1}, gain=0.85, nod=1.0, tilt=6.0, accent={"browOuterUpLeft": 0.15}),
+    "exhausted": dict(face={"eyeBlinkLeft": 0.32, "eyeBlinkRight": 0.32, "browInnerUp": 0.35, "mouthFrownLeft": 0.2,
+                            "mouthFrownRight": 0.2, "jawOpen": 0.07}, rest={},
+                      gain=0.75, nod=1.0, tilt=0.0, accent={"browInnerUp": 0.1}),
+    "surprised": dict(face={"browInnerUp": 0.6, "browOuterUpLeft": 0.55, "browOuterUpRight": 0.55, "eyeWideLeft": 0.45,
+                            "eyeWideRight": 0.45, "jawOpen": 0.18}, rest={},
+                      gain=1.1, nod=1.0, tilt=0.0, accent={"browInnerUp": 0.2}),
 }
 BLINK = ("eyeBlinkLeft", "eyeBlinkRight")
 CLOSURES = ("p_b_m_21", "f_v_18")
@@ -162,7 +183,7 @@ def plan(ph, emotion="neutral", fps=24, start=0.0, name="char", look=None):
         m = mouth_at(t, units, env, loud, E["gain"])
         frame = {k: 0.0 for k in names}
         frame.update(m)
-        for k, a in REST.items(): frame[k] = frame.get(k, 0) + a * (1 - env)
+        for k, a in E.get("rest", REST).items(): frame[k] = frame.get(k, 0) + a * (1 - env)
         for vk, sec in SECONDARY.items():
             if vk in m:
                 for k, a in sec.items(): frame[k] = frame.get(k, 0) + a * m[vk] / SHAPE[vk][0]
@@ -302,15 +323,17 @@ def key_look(rig, f0, f1, target, fps=24):
         for kp in fc.keyframe_points: kp.interpolation = "CONSTANT"
 
 
-def apply(rig, track, look_at=None):
-    """Key one spoken line onto the SPEAKING character: mouth, expression, accents, blinks, nods, eyes."""
+def apply(rig, track, look_at=None, body=True):
+    """Key one spoken line onto the SPEAKING character: mouth, expression, accents, blinks, nods, eyes.
+    body=False when tools/acting.py drives the body: it adds track["nod"]/["tilt"] to its own neck layer."""
     bpy = _bpy(); body = prepare(rig); f0, f1 = track["f0"], track["f1"]
     chans = dict(track["keys"])
     bl = blink_curve(blink_frames(rig.name, f0, f1, phrase_starts=[f0]), f0, f1)
     for k in BLINK: chans[k] = [max(a, b) for a, b in zip(chans.get(k, [0.0] * len(bl)), bl)]
     _key_values(body, chans, f0)
-    _key_bone(rig, "neck03", f0, [-n for n in track["nod"]], 0)    # nod = pitch forward
-    _key_bone(rig, "neck02", f0, track["tilt"], 1)                  # sarcasm/head tilt = roll
+    if body:
+        _key_bone(rig, "neck03", f0, [-n for n in track["nod"]], 0)    # nod = pitch forward
+        _key_bone(rig, "neck02", f0, track["tilt"], 1)                  # sarcasm/head tilt = roll
     if look_at is not None: key_look(rig, f0, f1, look_at)
     if any(track.get("roll", [])):                                  # eye roll: lift the eye target (eyeballs follow)
         from mathutils import Vector
@@ -326,7 +349,7 @@ def idle(rig, f0, f1, emotion="neutral", look_at=None, intensity=0.6):
     """A LISTENER: no visemes, mouth relaxed shut; expression at reduced intensity, blinks, eyes, tiny nods."""
     bpy = _bpy(); body = prepare(rig); E = EMOTION[emotion]; n = f1 - f0 + 1
     chans = {k: [a * intensity] * n for k, a in E["face"].items()}
-    for k, a in REST.items(): chans[k] = [v + a for v in chans.get(k, [0.0] * n)]
+    for k, a in E.get("rest", REST).items(): chans[k] = [v + a for v in chans.get(k, [0.0] * n)]
     for v in VISEMES: chans.setdefault(v, [0.0] * n)                 # make sure no lip sync leaks onto a listener
     bl = blink_curve(blink_frames(rig.name, f0, f1), f0, f1)
     for k in BLINK: chans[k] = bl
