@@ -21,7 +21,7 @@
 | 9 | CLK | stay polite while being snapped at | neutral | listener | 0.0s INF | 0.80s react annoyed |
 | 10 | INF | make it clear he will not carry anything | arrogant | primary | 0.0s CLK, 0.6s point, 0.8s CLK | 0.66s accent beat; 0.95s pose hand_hip_L; 1.00s accent scoff |
 | 10 | CLK | take the order in silence | annoyed | listener | 0.0s INF |  |
-| 11 | INF | cut the line to the VIP elevator, still streaming | arrogant | listener | 0.0s self:phone | 0.40s accent scoff |
+| 11 | INF | cut the line to the VIP elevator, still streaming | arrogant | primary | 0.0s self:phone | 0.40s accent scoff |
 | 11 | F1 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone | 0.31s accent adjust_phone |
 | 11 | F2 | film INF: catch every moment for the stream | neutral | background | 0.0s self:phone | 0.50s accent laugh |
 | 12 | CLK | process it: fourteen bags, nine floors, no elevator | neutral | primary | 0.0s point, 0.3s point, 0.8s point | 0.15s react disbelief; 0.85s accent shake |
