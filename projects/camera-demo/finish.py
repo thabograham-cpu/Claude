@@ -1,5 +1,5 @@
 """Burn technique labels onto the rendered frames and encode the review MP4 (python3 + ffmpeg)."""
-import os, subprocess
+import os, json, subprocess
 HERE = os.path.dirname(os.path.abspath(__file__)); FONTS = os.path.join(HERE, "..", "..", "tools", "fonts")
 FPS = 24
 SEGS = [  # (first frame, last frame, title, what to watch)
@@ -12,6 +12,11 @@ SEGS = [  # (first frame, last frame, title, what to watch)
     (541, 636, "7  RACK FOCUS", "focus pulls from him to the clerk"),
     (637, 720, "8  OVER THE SHOULDER", "framed past the clerk's shoulder"),
 ]
+
+
+# coverage demo: SEGS=coverage_segs.json OUT=CameraCoverage_Hotel.mp4 FRAMES=frames_cov python3 finish.py
+if os.environ.get("SEGS"): SEGS = json.load(open(os.path.join(HERE, os.environ["SEGS"])))
+FRAMES = os.path.join(HERE, os.environ.get("FRAMES", "frames"))
 
 
 def ts(f):
@@ -35,8 +40,8 @@ for a, b, title, sub in SEGS:
     ass += f"Dialogue: 0,{ts(a)},{ts(b + 1)},Title,,0,0,0,,{{\\fscx118\\fscy118\\t(0,120,\\fscx100\\fscy100)}}{title}\n"
     ass += f"Dialogue: 0,{ts(a + 6)},{ts(b + 1)},Sub,,0,0,0,,{sub}\n"
 open(os.path.join(HERE, "labels.ass"), "w").write(ass)
-out = os.path.join(HERE, "CameraDemo_Hotel.mp4")
-subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", os.path.join(HERE, "frames", "f_%04d.png"),
+out = os.path.join(HERE, os.environ.get("OUT", "CameraDemo_Hotel.mp4"))
+subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", os.path.join(FRAMES, "f_%04d.png"),
                 "-vf", f"scale=1080:1920:flags=lanczos,ass={os.path.join(HERE, 'labels.ass')}:fontsdir={FONTS}",
                 "-c:v", "libx264", "-crf", "17", "-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out], check=True)
 print("wrote", out)

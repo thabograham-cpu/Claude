@@ -1,5 +1,6 @@
 """EEVEE look for the Complainer sets: materials from the blockout colours, tinted cast clothes,
 lobby lights, AgX, 9:16 render settings. Used by projects/camera-demo/demo.py and scene.py."""
+import math
 import bpy
 from mathutils import Vector
 import cast
@@ -62,3 +63,14 @@ def add_step_poses(POSES):
         POSES[f"{arms}_stepL"] = {**base, **L}; POSES[f"{arms}_stepR"] = {**base, **R}
     c = POSES["carry_climb"]
     POSES["carry_climbR"] = {k: v for k, v in c.items() if "leg" not in k} | {"upperleg01.R": (-0.05, -0.6, -0.8), "lowerleg01.R": (0, 0.1, -1)}
+
+
+def key_rig(sb, name, f, p, loc, face):
+    """Key a cast rig's place, facing (deg, 0 = toward -Y) and pose at frame f. MPFB pose bones are Euler XYZ,
+    so key whichever rotation channel each bone actually uses."""
+    r = sb["RIGS"][name]; r.location = Vector(loc); r.rotation_euler = (0, 0, math.radians(face))
+    r.keyframe_insert("location", frame=f); r.keyframe_insert("rotation_euler", frame=f)
+    sb["pose"](name, r, p)
+    for pb in r.pose.bones:
+        pb.keyframe_insert("rotation_quaternion" if pb.rotation_mode == "QUATERNION" else "rotation_euler", frame=f)
+        pb.keyframe_insert("location", frame=f)

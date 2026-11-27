@@ -45,6 +45,6 @@ BL=tools/bl.py   # in the thabograham-cpu/claude repo (run from the repo root)
 | `psx_post.py` / `psx_batch.py` | PS1 look: downscale, 15-bit dither, nearest upscale |
 | `asr.py` | word timestamps: `HF_HUB_DISABLE_XET=1 /home/user/blender-shorts/asr/bin/python -I tools/asr.py voice.mp3 words.json` (venv: `pip install faster-whisper`) |
 | `render_segment.sh` | `tools/render_segment.sh projects/<name> FIRST LAST [WORKERS]`: one cloud session renders a frame range into `segments/seg_*.mp4` to commit; split long renders across sessions |
-| `camera.py` | camera rig + moves: dolly, pan/tilt, crane, orbit, zoom, dolly zoom, whip pan, tracking, paths, DoF, rack focus, handheld, motion blur; `apply()` for shot-list dicts; self-test `$PY tools/camera.py` |
-| `shotcraft.py` | shot placement (size->distance, line-of-sight, eye line) and sequence lint (180-degree rule, jump cuts, pacing, beat-based size hints); self-test `$PY tools/shotcraft.py` |
+| `camera.py` | camera rig (position, look-at, lens, focus as independent channels) + eased moves: dolly, truck, pedestal, pan/tilt, crane, orbit/arc, zoom, dolly zoom, whip pan, track/anticipate, follow (tracking shots), foreground reveal, hold, paths, DoF, rack/follow focus, deterministic handheld, motion blur; `describe()` + `apply()` for shot lists; self-test `$PY tools/camera.py` |
+| `shotcraft.py` | shot placement (size->distance, line-of-sight, eye line, low/high/overhead), coverage (OTS, shot-reverse-shot, inserts), PURPOSE presets, shot list export, camera lint + parallax check, sequence lint (180-degree rule, jump cuts, pacing); self-test `$PY tools/shotcraft.py` |
 | `fonts/` | Press Start 2P (OFL) for caption burn-in via ffmpeg `ass=...:fontsdir=tools/fonts` |

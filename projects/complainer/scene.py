@@ -8,7 +8,7 @@ from mathutils import Vector, Matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sb = runpy.run_path(os.path.join(HERE, "storyboard.py"), run_name="storyboard_lib")  # sets, cast, poses, shot_camera
-import look, camera as C  # storyboard put HERE and tools/ on sys.path
+import look, camera as C, shotcraft as SC  # storyboard put HERE and tools/ on sys.path
 
 S, RIGS, OBJ, POSES, pose, ORIGIN = (sb[k] for k in ("S", "RIGS", "OBJ", "POSES", "pose", "ORIGIN"))
 FPS, END_S = 24, float(os.environ.get("END_S", 20))
@@ -28,12 +28,7 @@ HANDHELD = ("selfie", "film", "phone")  # poses that hold a phone in the right h
 
 
 def key_rig(name, f, p, loc, face):
-    r = RIGS[name]; r.location = Vector(loc); r.rotation_euler = (0, 0, math.radians(face))
-    r.keyframe_insert("location", frame=f); r.keyframe_insert("rotation_euler", frame=f)
-    pose(name, r, p)
-    for pb in r.pose.bones:
-        pb.keyframe_insert("rotation_quaternion" if pb.rotation_mode == "QUATERNION" else "rotation_euler", frame=f)
-        pb.keyframe_insert("location", frame=f)
+    look.key_rig(sb, name, f, p, loc, face)
 
 
 def key_vis(ob, f, visible):  # hide_viewport too: hidden props must not block shotcraft's line-of-sight rays
@@ -63,7 +58,7 @@ for k, (sx, by, z) in enumerate(((0.48, 0, 0.55), (-0.48, 0, 0.55), (0, 0.32, 1.
     b.parent = RIGS["CLK"]; b.matrix_parent_inverse = Matrix(); b.location = (sx, by, z)  # +Y local = behind him
     BAGS.append(b)
 
-cams = []
+cams, rows = [], []
 for s in S:
     if s["t0"] >= END_S: break
     assert s["set"], f"shot {s['id']}: card shots are not built yet"
@@ -104,6 +99,8 @@ for s in S:
         C.dof(rg, 2.8, RIGS[subj], "head")
     m = sc.timeline_markers.new(rg.cam.name, frame=f0); m.camera = rg.cam
     cams.append((s["id"], f0, f1, info))
+    rows.append(dict(id=s["id"], f0=f0, f1=f1, type=f"{s['cam'][0]} {s['cam'][2]}", subject=subj, purpose=s["note"],
+                     **C.describe(rg, f0, f1, subj if rg.cam.data.dof.use_dof else None)))
     print("SHOT", s["id"], f0, f1, info)
 
 # cast: linear walk paths, smooth limbs; props and visibility snap at the cuts
@@ -113,5 +110,7 @@ for ob in list(RIGS.values()) + [OBJ["cart"], OBJ["small_box"], *PHONES.values()
         for kp in fc.keyframe_points:
             kp.interpolation = ("LINEAR" if fc.data_path == "location" else "BEZIER") if is_rig else "CONSTANT"
 sc.camera = min(sc.timeline_markers, key=lambda m: m.frame).camera
+SC.shotlist(rows, os.path.join(HERE, "shotlist.md"), FPS)  # review this before rendering
+for w in SC.camera_lint(rows): print("CAMERA LINT:", w)
 sc.frame_set(1)
 print("SCENE built:", len(cams), "shots,", sc.frame_end, "frames")
