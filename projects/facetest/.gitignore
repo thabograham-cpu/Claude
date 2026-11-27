@@ -1,0 +1,7 @@
+frames/
+check/
+*.blend
+*.mp4
+timing.json
+shotlist.md
+mix.wav

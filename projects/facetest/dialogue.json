@@ -1,0 +1,8 @@
+{"fps": 24, "lines": [
+ {"speaker": "CLK", "emotion": "neutral", "start": 0.25, "audio": "audio/l1_clk_neutral.mp3", "phones": "audio/l1_clk_neutral.phones.json",
+  "text": "Good evening. Your suite is on the ninth floor.", "listener_emotion": "neutral", "cam_angle": -38},
+ {"speaker": "INF", "emotion": "angry", "start": 3.75, "audio": "audio/l2_inf_angry.mp3", "phones": "audio/l2_inf_angry.phones.json",
+  "text": "Ninth floor? Carry my bags. Now!", "listener_emotion": "neutral", "cam_angle": -18},
+ {"speaker": "CLK", "emotion": "sarcastic", "start": 7.05, "audio": "audio/l3_clk_sarcastic.mp3", "phones": "audio/l3_clk_sarcastic.phones.json",
+  "text": "Of course, sir. Fourteen bags. My absolute pleasure.", "listener_emotion": "angry", "cam_angle": -38}
+]}
