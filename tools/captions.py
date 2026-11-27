@@ -13,11 +13,12 @@ Self-test: python3 tools/captions.py
 import json, re, sys
 
 W, H = 1080, 1920
-Y_MAIN, Y_ALT = 0.74, 0.30          # caption centre (fraction of height): default and face-free alternative
+Y_MAIN, Y_ALT = 0.74, 0.30          # caption centre (fraction of height): default and last-resort alternative
+Y_TRY = (0.74, 0.64, 0.30)          # stay low like the reference; move up only as far as a face forces
 SAFE_X, SAFE_Y = (0.09, 0.82), (0.12, 0.80)
 MAX_WORDS, MAX_LINE, MAX_GAP = 3, 14, 0.35
-STYLE = ("Style: Cap,Montserrat ExtraBold,64,&H00FFFFFF,&H00FFFFFF,&H00141414,&H64000000,0,0,0,0,100,100,0,0,1,"
-         "2.6,1.6,5,40,40,40,1")
+STYLE = ("Style: Cap,Montserrat ExtraBold,88,&H00FFFFFF,&H00FFFFFF,&H00141414,&H64000000,0,0,0,0,100,100,0,0,1,"
+         "3.4,2.0,5,40,40,40,1")   # ~70% of the width for a 14-character line, as measured on the reference
 
 
 def clean(w):
@@ -77,18 +78,16 @@ def timed(caps, lead=0.04, hold=0.6):
 
 
 def place(caps, faces=None, fps=24):
-    """Caption centre y per caption: Y_MAIN unless a face box overlaps the caption band during it."""
+    """Caption centre y per caption: the lowest band in Y_TRY that no face box overlaps during it (the
+    reference keeps captions low, over the chest of a close-up); Y_MAIN if every band is covered."""
     for c in caps:
-        lines = c["text"].count("\\N") + 1 if "\\N" in c.get("text", "") else (2 if len(c["text"]) > MAX_LINE else 1)
-        half = 0.025 * lines + 0.01
-        band = (Y_MAIN - half, Y_MAIN + half)
-        hit = False
+        lines = 2 if len(c["text"]) > MAX_LINE else 1
+        half = 0.034 * lines + 0.01
+        boxes = []
         if faces:
-            for f in range(int(c["t0"] * fps) + 1, int(c["t1"] * fps) + 2):
-                for x0, y0, x1, y1 in faces.get(str(f), faces.get(f, [])):
-                    if y0 < band[1] and y1 > band[0] and x0 < 0.75 and x1 > 0.25: hit = True; break
-                if hit: break
-        c["y"] = Y_ALT if hit else Y_MAIN
+            for f in range(int(c["t0"] * fps) + 1, int(c["t1"] * fps) + 2): boxes += faces.get(str(f), faces.get(f, []))
+        free = lambda y: not any(y0 < y + half and y1 > y - half and x0 < 0.8 and x1 > 0.2 for x0, y0, x1, y1 in boxes)
+        c["y"] = next((y for y in Y_TRY if free(y)), Y_MAIN)
     return caps
 
 
