@@ -30,14 +30,15 @@ def _lin(c): return tuple(x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) *
 def _rgb(c): return (*_lin(c), 1.0)   # kit colours are written in sRGB (as picked); shaders want linear
 
 
-def material(name, color, rough=0.6, metal=0.0, kind="plain", color2=None, scale=1.0, var=0.06, bump=0.15, emit=0.0, alpha=1.0, tile=None):
+def material(name, color, rough=0.6, metal=0.0, kind="plain", color2=None, scale=1.0, var=0.06, bump=0.15, emit=0.0, alpha=1.0, tile=None, grime=0.0):
     """kind: plain | marble | wood | carpet | plaster | paver | wallpaper | glass. Textures use world position so
     nothing stretches; every surface gets value and roughness variation plus a little bump (no CG plastic)."""
     if name in _MATS: return _MATS[name]
     m = bpy.data.materials.new(name); m.use_nodes = True; m.diffuse_color = _rgb(color); m.use_fake_user = True
     nt = m.node_tree; N, Lk = nt.nodes, nt.links
     b = N["Principled BSDF"]; geo = N.new("ShaderNodeNewGeometry")
-    mp = N.new("ShaderNodeMapping"); mp.inputs["Scale"].default_value = (scale, scale, scale); Lk.new(geo.outputs["Position"], mp.inputs["Vector"])
+    mp = N.new("ShaderNodeMapping"); Lk.new(geo.outputs["Position"], mp.inputs["Vector"])
+    mp.inputs["Scale"].default_value = (scale, scale, scale * 0.12) if kind == "wood" else (scale, scale, scale)   # grain runs along the boards
     noise = N.new("ShaderNodeTexNoise"); noise.inputs["Scale"].default_value = 4.0; noise.inputs["Detail"].default_value = 6.0
     Lk.new(mp.outputs["Vector"], noise.inputs["Vector"])
     c2 = color2 or tuple(max(0.0, x * (1 - 2 * var)) for x in color)
@@ -64,13 +65,33 @@ def material(name, color, rough=0.6, metal=0.0, kind="plain", color2=None, scale
         br.offset = tile[3] if len(tile) > 3 else 0.0
         Lk.new(col, br.inputs["Color1"]); Lk.new(col, br.inputs["Color2"]); br.inputs["Mortar"].default_value = _rgb(tile[2])
         br.inputs["Bias"].default_value = 0.0; col = br.outputs["Color"]
+    if grime:                                                               # wear: darker near the floor + random smudges
+        sep = N.new("ShaderNodeSeparateXYZ"); Lk.new(geo.outputs["Position"], sep.inputs["Vector"])
+        zr = N.new("ShaderNodeMapRange"); zr.inputs["From Min"].default_value = 0.0; zr.inputs["From Max"].default_value = 0.45
+        zr.inputs["To Min"].default_value = 1.0; zr.inputs["To Max"].default_value = 0.0; Lk.new(sep.outputs["Z"], zr.inputs["Value"])
+        sm = N.new("ShaderNodeTexNoise"); sm.inputs["Scale"].default_value = 1.7; sm.inputs["Detail"].default_value = 4.0
+        Lk.new(geo.outputs["Position"], sm.inputs["Vector"])
+        mx = N.new("ShaderNodeMath"); mx.operation = "MULTIPLY_ADD"; mx.inputs[2].default_value = 0.0
+        Lk.new(sm.outputs["Fac"], mx.inputs[0]); mx.inputs[1].default_value = 0.6
+        ad = N.new("ShaderNodeMath"); ad.operation = "ADD"; ad.use_clamp = True; Lk.new(zr.outputs["Result"], ad.inputs[0]); Lk.new(mx.outputs[0], ad.inputs[1])
+        val = N.new("ShaderNodeMath"); val.operation = "MULTIPLY_ADD"; val.inputs[1].default_value = -grime; val.inputs[2].default_value = 1.0
+        Lk.new(ad.outputs[0], val.inputs[0])
+        hsv = N.new("ShaderNodeHueSaturation"); Lk.new(col, hsv.inputs["Color"]); Lk.new(val.outputs[0], hsv.inputs["Value"]); col = hsv.outputs["Color"]
     Lk.new(col, b.inputs["Base Color"])
     rr = N.new("ShaderNodeMapRange"); rr.inputs["To Min"].default_value = max(0.02, rough - 0.12); rr.inputs["To Max"].default_value = min(1.0, rough + 0.12)
-    Lk.new(noise.outputs["Fac"], rr.inputs["Value"]); Lk.new(rr.outputs["Result"], b.inputs["Roughness"])
+    rsrc = noise.outputs["Fac"]
+    if metal > 0.5:                                                         # brushed: long streaks in roughness and bump
+        st = N.new("ShaderNodeMapping"); st.inputs["Scale"].default_value = (40.0, 40.0, 1.2); Lk.new(geo.outputs["Position"], st.inputs["Vector"])
+        sn = N.new("ShaderNodeTexNoise"); sn.inputs["Scale"].default_value = 6.0; sn.inputs["Detail"].default_value = 8.0
+        Lk.new(st.outputs["Vector"], sn.inputs["Vector"]); rsrc = sn.outputs["Fac"]
+    Lk.new(rsrc, rr.inputs["Value"]); Lk.new(rr.outputs["Result"], b.inputs["Roughness"])
     b.inputs["Metallic"].default_value = metal
     if bump:
         bn = N.new("ShaderNodeBump"); bn.inputs["Strength"].default_value = bump; bn.inputs["Distance"].default_value = 0.02
-        fine = N.new("ShaderNodeTexNoise"); fine.inputs["Scale"].default_value = 60.0 if kind in ("carpet", "plaster", "paver") else 25.0
+        if kind == "fabric":                                                # woven: fine crossing bands
+            fine = N.new("ShaderNodeTexWave"); fine.wave_type = "BANDS"; fine.bands_direction = "DIAGONAL"; fine.inputs["Scale"].default_value = 260.0
+        else:
+            fine = N.new("ShaderNodeTexNoise"); fine.inputs["Scale"].default_value = 60.0 if kind in ("carpet", "plaster", "paver") else 25.0
         Lk.new(geo.outputs["Position"], fine.inputs["Vector"]); Lk.new(fine.outputs["Fac"], bn.inputs["Height"]); Lk.new(bn.outputs["Normal"], b.inputs["Normal"])
     if emit:
         b.inputs["Emission Color"].default_value = _rgb(color); b.inputs["Emission Strength"].default_value = emit
@@ -86,9 +107,9 @@ def material(name, color, rough=0.6, metal=0.0, kind="plain", color2=None, scale
 def palette():
     M = material
     return dict(
-        marble=M("HK_Marble", (0.86, 0.82, 0.74), 0.3, kind="marble", color2=(0.55, 0.5, 0.45), scale=0.7, tile=(0.8, 0.004, (0.45, 0.4, 0.36)), bump=0.05),
+        marble=M("HK_Marble", (0.74, 0.7, 0.63), 0.44, kind="marble", color2=(0.48, 0.44, 0.4), scale=0.7, tile=(0.8, 0.004, (0.38, 0.34, 0.3)), bump=0.06, grime=0.18),
         marble_dark=M("HK_MarbleDark", (0.13, 0.11, 0.1), 0.28, kind="marble", color2=(0.3, 0.27, 0.24), scale=0.9, bump=0.05),
-        plaster=M("HK_Plaster", (0.82, 0.77, 0.68), 0.85, kind="plaster", var=0.03, bump=0.08),
+        plaster=M("HK_Plaster", (0.7, 0.64, 0.55), 0.85, kind="plaster", var=0.04, bump=0.08, grime=0.22),
         plaster_cool=M("HK_PlasterCool", (0.74, 0.73, 0.69), 0.88, kind="plaster", var=0.03, bump=0.08),
         ceiling=M("HK_Ceiling", (0.88, 0.86, 0.82), 0.9, var=0.02, bump=0.03),
         accent=M("HK_Burgundy", (0.36, 0.07, 0.1), 0.8, kind="wallpaper", color2=(0.3, 0.05, 0.08), bump=0.1),
@@ -97,25 +118,25 @@ def palette():
         brass=M("HK_Brass", (0.8, 0.62, 0.3), 0.36, metal=1.0, var=0.05, bump=0.03),
         steel=M("HK_Steel", (0.66, 0.66, 0.68), 0.38, metal=1.0, var=0.04, bump=0.03),
         black=M("HK_BlackPaint", (0.04, 0.04, 0.045), 0.55, var=0.02),
-        carpet=M("HK_Carpet", (0.34, 0.07, 0.09), 0.95, kind="carpet", color2=(0.26, 0.05, 0.07), scale=3.0, tile=(0.45, 0.005, (0.38, 0.22, 0.12), 0.5), bump=0.25),
+        carpet=M("HK_Carpet", (0.34, 0.07, 0.09), 0.95, kind="carpet", color2=(0.26, 0.05, 0.07), scale=3.0, tile=(0.45, 0.005, (0.38, 0.22, 0.12), 0.5), bump=0.25, grime=0.15),
         rug=M("HK_Rug", (0.12, 0.2, 0.26), 0.95, kind="carpet", color2=(0.08, 0.13, 0.17), scale=2.0, tile=(0.6, 0.006, (0.3, 0.26, 0.18)), bump=0.25),
         rug_warm=M("HK_RugWarm", (0.62, 0.52, 0.4), 0.95, kind="carpet", color2=(0.5, 0.4, 0.3), scale=2.5, bump=0.3),
-        wallpaper=M("HK_Wallpaper", (0.72, 0.64, 0.5), 0.8, kind="wallpaper", color2=(0.66, 0.57, 0.43), bump=0.05),
-        velvet=M("HK_Velvet", (0.05, 0.24, 0.26), 0.92, var=0.1, bump=0.2),
-        mustard=M("HK_Mustard", (0.55, 0.37, 0.1), 0.9, var=0.1, bump=0.2),
+        wallpaper=M("HK_Wallpaper", (0.66, 0.58, 0.45), 0.8, kind="wallpaper", color2=(0.6, 0.52, 0.4), bump=0.05, grime=0.2),
+        velvet=M("HK_Velvet", (0.05, 0.24, 0.26), 0.92, kind="fabric", var=0.1, bump=0.25),
+        mustard=M("HK_Mustard", (0.55, 0.37, 0.1), 0.9, kind="fabric", var=0.1, bump=0.25),
         leather=M("HK_Leather", (0.24, 0.11, 0.05), 0.6, var=0.12, bump=0.15),
         leaf=M("HK_Leaf", (0.12, 0.28, 0.07), 0.65, color2=(0.05, 0.14, 0.04), var=0.2, bump=0.1),
         pot=M("HK_Pot", (0.1, 0.09, 0.085), 0.5, var=0.05),
         soil=M("HK_Soil", (0.09, 0.06, 0.04), 0.95),
-        concrete=M("HK_Concrete", (0.55, 0.54, 0.52), 0.9, kind="plaster", var=0.08, bump=0.15),
-        stairpaint=M("HK_StairPaint", (0.78, 0.77, 0.72), 0.85, var=0.03),
+        concrete=M("HK_Concrete", (0.5, 0.49, 0.47), 0.9, kind="plaster", var=0.1, bump=0.2, grime=0.25),
+        stairpaint=M("HK_StairPaint", (0.68, 0.67, 0.62), 0.85, var=0.04, grime=0.3),
         stone=M("HK_Limestone", (0.64, 0.58, 0.49), 0.85, kind="plaster", color2=(0.55, 0.49, 0.41), scale=0.5, tile=(0.9, 0.008, (0.42, 0.38, 0.33)), bump=0.12),
         brick=M("HK_Brick", (0.45, 0.2, 0.14), 0.9, color2=(0.32, 0.14, 0.1), var=0.15, tile=(0.2, 0.01, (0.6, 0.57, 0.52), 0.5), bump=0.2),
         render_grey=M("HK_RenderGrey", (0.52, 0.52, 0.5), 0.9, kind="plaster", var=0.05),
         glass=M("HK_Glass", (0.6, 0.7, 0.72), 0.05, alpha=0.18, var=0.0, bump=0.0),
         winglass=M("HK_WindowGlass", (0.06, 0.08, 0.1), 0.08, metal=0.3, var=0.02, bump=0.0),
         winlit=M("HK_WindowLit", (0.95, 0.78, 0.5), 0.3, emit=1.2, var=0.0, bump=0.0),
-        paver=M("HK_Paver", (0.55, 0.54, 0.51), 0.9, kind="paver", tile=(0.4, 0.01, (0.35, 0.34, 0.32), 0.5), bump=0.15),
+        paver=M("HK_Paver", (0.52, 0.51, 0.48), 0.9, kind="paver", tile=(0.4, 0.01, (0.33, 0.32, 0.3), 0.5), bump=0.15, grime=0.2),
         asphalt=M("HK_Asphalt", (0.13, 0.13, 0.135), 0.95, var=0.1, bump=0.3),
         paint_white=M("HK_RoadWhite", (0.8, 0.8, 0.76), 0.8, var=0.05),
         redcarpet=M("HK_RedCarpet", (0.45, 0.04, 0.05), 0.95, kind="carpet", bump=0.2),
@@ -127,7 +148,16 @@ def palette():
         mirror=M("HK_Mirror", (0.85, 0.87, 0.88), 0.05, metal=1.0, var=0.0, bump=0.0),
         night_city=M("HK_NightCity", (0.03, 0.04, 0.09), 0.9, var=0.05, bump=0.0, emit=0.3),
         green_shop=M("HK_ShopGreen", (0.12, 0.38, 0.16), 0.7, var=0.05),
-        fabric_white=M("HK_Linen", (0.9, 0.88, 0.84), 0.9, var=0.03, bump=0.1),
+        fabric_white=M("HK_Linen", (0.9, 0.88, 0.84), 0.9, kind="fabric", var=0.03, bump=0.1),
+        plastic=M("HK_PlasticDark", (0.06, 0.06, 0.065), 0.45, var=0.03, bump=0.02),
+        plastic_grey=M("HK_PlasticGrey", (0.32, 0.32, 0.33), 0.5, var=0.03, bump=0.02),
+        screen=M("HK_Screen", (0.35, 0.55, 0.85), 0.2, emit=1.4, var=0.0, bump=0.0),
+        paper=M("HK_Paper", (0.88, 0.87, 0.83), 0.9, var=0.02, bump=0.05),
+        rubber=M("HK_Rubber", (0.04, 0.04, 0.04), 0.85, var=0.02),
+        office_fabric=M("HK_OfficeFabric", (0.12, 0.12, 0.14), 0.95, kind="fabric", var=0.06, bump=0.25),
+        flag=M("HK_Flag", (0.42, 0.06, 0.1), 0.85, kind="fabric", var=0.05, bump=0.1),
+        red_paint=M("HK_RedPaint", (0.6, 0.06, 0.05), 0.4, var=0.03),
+        green_led=M("HK_GreenLED", (0.2, 1.0, 0.4), 0.3, emit=4.0, var=0.0, bump=0.0),
     )
 
 
@@ -166,13 +196,13 @@ class MB:
         out = bmesh.ops.create_uvsphere(self.bm, u_segments=seg, v_segments=max(4, seg // 2), radius=r, matrix=M)
         self._fin(out["verts"], mat, True)
 
-    def done(self, bevel=0.0, parent=None):
+    def done(self, bevel=0.0, parent=None, segments=2):
         me = bpy.data.meshes.new(self.name); self.bm.to_mesh(me); self.bm.free()
         for m in self.mats: me.materials.append(m)
         ob = bpy.data.objects.new(self.name, me); self.coll.objects.link(ob)
         if parent: ob.parent = parent
         if bevel:
-            md = ob.modifiers.new("Bevel", "BEVEL"); md.width = bevel; md.segments = 2; md.limit_method = "ANGLE"
+            md = ob.modifiers.new("Bevel", "BEVEL"); md.width = bevel; md.segments = segments; md.limit_method = "ANGLE"
             md.harden_normals = False
         return ob
 
@@ -239,10 +269,20 @@ def wall(mb, axis, c, a, b, z0, h, mat, inside=1, openings=(), t=0.25, trim=None
                 q0, q1 = s0 + k * w + 0.12, s0 + (k + 1) * w - 0.12
                 for (u0, u1, v0, v1) in ((q0, q1, 0.28, 0.31), (q0, q1, 0.78, 0.81), (q0, q0 + 0.03, 0.28, 0.81), (q1 - 0.03, q1, 0.28, 0.81)):
                     _bx(mb, axis, u0, u1, *p(0.015), z0 + v0, z0 + v1, trim["panel"])
-    if trim.get("crown"): _bx(mb, axis, a, b, *p(0.06), z0 + h - 0.16, z0 + h, trim["crown"])
+    if trim.get("crown"):                                                     # stepped cornice: three bands
+        for d, zz in ((0.05, 0.22), (0.09, 0.14), (0.13, 0.06)): _bx(mb, axis, a, b, *p(d), z0 + h - zz, z0 + h - zz + 0.08, trim["crown"])
+    if trim.get("picture") and h > 3.5:                                        # upper wall panels (picture-moulding frames)
+        for s0, s1 in spans:
+            n = max(1, int((s1 - s0) / 1.6)); w = (s1 - s0) / n
+            for k in range(n):
+                q0, q1 = s0 + k * w + 0.18, s0 + (k + 1) * w - 0.18
+                if q1 - q0 < 0.4: continue
+                for (u0, u1, v0, v1) in ((q0, q1, 1.35, 1.38), (q0, q1, h - 0.55, h - 0.52), (q0, q0 + 0.03, 1.35, h - 0.52), (q1 - 0.03, q1, 1.35, h - 0.52)):
+                    _bx(mb, axis, u0, u1, *p(0.015), z0 + v0, z0 + v1, trim["picture"])
 
 
 def room(name, x0, y0, x1, y1, z0, h, P, floor, wallm, ceil, walls, trim=None, c=None, slab=0.25):
+    """(mb.done(bevel=0.006) on the caller rounds every edge slightly.)"""
     """Floor + ceiling + up to four walls (walls: dict side -> openings list, or None to skip a shared wall)."""
     mb = MB(f"ARCH_{name}", c)
     mb.box((x0 - 0.25, y0 - 0.25, z0 - slab), (x1 + 0.25, y1 + 0.25, z0), floor)
@@ -313,7 +353,13 @@ def elevator(name, center_y, x_wall, z0, P, c_, vip=False, w=1.1, h=2.3):
     fr.box((cx1 - 0.01, cy0 + 0.3, z0 + 0.9), (cx1, cy1 - 0.3, z0 + 2.2), P["mirror"])
     for y in (cy0 + 0.06, cy1 - 0.06): fr.rod((cx0, y, z0 + 0.95), (cx1 - 0.05, y, z0 + 0.95), 0.02, P["brass"])
     fr.box((cx0 + 0.3, cy0 + 0.4, z0 + 2.58), (cx1 - 0.3, cy1 - 0.4, z0 + 2.6), P["warm_light"])
-    frame = fr.done()
+    fr.box((x_wall - 0.12, center_y - w / 2, z0), (x_wall + 0.02, center_y + w / 2, z0 + 0.006), P["steel"])            # door sill
+    fr.box((x_wall - 0.03, center_y - 0.18, z0 + h + 0.55), (x_wall, center_y + 0.18, z0 + h + 0.68), P["black"])        # hall lantern
+    fr.box((x_wall - 0.035, center_y - 0.03, z0 + h + 0.58), (x_wall - 0.03, center_y + 0.03, z0 + h + 0.65), P["warm_light"])
+    fr.box((cx0 + 0.05, cy1 - 0.02, z0 + 0.9), (cx0 + 0.3, cy1, z0 + 1.5), P["steel"])                             # car control panel
+    for i in range(2):
+        for j in range(5): fr.cyl((cx0 + 0.12 + i * 0.1, cy1 - 0.022, z0 + 1.0 + j * 0.09), 0.018, 0.006, P["brass"] if vip else P["plastic_grey"], axis="Y", seg=10)
+    frame = fr.done(bevel=0.004)
     text("9" if vip else "1", (x_wall - 0.055, center_y, z0 + h + 0.375), 0.18, P["warm_light"], c_, rot=facing_rot((-1, 0)), name=f"TXT_elev_{name}")
     ROOMS[f"car_{name}"] = (Vector((cx0, cy0, z0)), Vector((cx1, cy1, z0 + 2.6)))
     light(f"LGT_car_{name}", "AREA", ((cx0 + cx1) / 2, center_y, z0 + 2.5), 60, (1.0, 0.86, 0.66), 0.8, aim=((cx0 + cx1) / 2, center_y, 0), c=c_)
@@ -442,6 +488,65 @@ def trolley(name, P, c_):
     mb.done(bevel=0.005, parent=root); return root
 
 
+def reception_desk(root, P, c_):
+    """Reception counter (local coords, guest side -Y, origin floor centre, 4.4 m long): fluted walnut front with
+    a brass kick, marble transaction ledge at 1.16 m over a staff work surface at 0.78 m, cabinets, and the working
+    kit - two monitors, keyboards, mice, desk phone, keycard encoder + cards, paperwork, pen cup, receipt printer,
+    PC tower, guest-side card terminal, bell and brochures. Returns the counter mesh (SM_Desk)."""
+    mb = MB("SM_Desk", c_)
+    mb.box((-2.2, -0.44, 0.1), (2.2, -0.38, 1.12), P["walnut"])                                      # front panel
+    for k in range(22): mb.box((-2.15 + k * 0.2, -0.47, 0.12), (-2.07 + k * 0.2, -0.44, 1.04), P["oak"])   # fluting
+    mb.box((-2.2, -0.47, 0.0), (2.2, -0.38, 0.1), P["brass"])                                          # kick plate
+    for x in (-2.2, 2.14): mb.box((x, -0.44, 0.0), (x + 0.06, 0.45, 1.12), P["walnut"])              # end panels
+    mb.box((-2.3, -0.52, 1.12), (2.3, -0.12, 1.16), P["marble"])                                      # transaction ledge
+    mb.box((-2.2, -0.2, 0.78), (2.2, -0.12, 1.12), P["walnut"])                                       # riser behind the ledge
+    mb.box((-2.15, -0.38, 0.74), (2.14, 0.45, 0.78), P["walnut"])                                     # staff work surface
+    for x0 in (-2.1, 1.3):                                                                            # drawer pedestals
+        mb.box((x0, -0.3, 0.0), (x0 + 0.75, 0.4, 0.72), P["walnut"])
+        for k in range(3): mb.box((x0 + 0.03, 0.4, 0.06 + k * 0.23), (x0 + 0.72, 0.415, 0.26 + k * 0.23), P["oak"]); mb.box((x0 + 0.3, 0.415, 0.15 + k * 0.23), (x0 + 0.45, 0.43, 0.17 + k * 0.23), P["steel"])
+    desk = mb.done(bevel=0.006, parent=root)
+    kit = MB("SM_DeskKit", c_); z = 0.78
+    for x in (-1.0, 0.95):                                                                            # monitors face the staff side
+        kit.box((x - 0.1, 0.12, z), (x + 0.1, 0.27, z + 0.012), P["plastic"]); kit.box((x - 0.02, 0.2, z), (x + 0.02, 0.24, z + 0.22), P["plastic"])
+        kit.box((x - 0.28, 0.17, z + 0.16), (x + 0.28, 0.2, z + 0.5), P["plastic"]); kit.box((x - 0.265, 0.2, z + 0.175), (x + 0.265, 0.203, z + 0.485), P["screen"])
+        kit.box((x - 0.22, 0.32, z), (x + 0.22, 0.46, z + 0.02), P["plastic"])                       # keyboard
+        for r in range(4): kit.box((x - 0.2, 0.335 + r * 0.03, z + 0.02), (x + 0.2, 0.355 + r * 0.03, z + 0.028), P["plastic_grey"])
+        kit.sphere((x + 0.32, 0.4, z + 0.015), 0.03, P["plastic"], scale=(0.75, 1.3, 0.5), seg=10)    # mouse
+    kit.box((0.05, 0.3, z), (0.27, 0.46, z + 0.05), P["plastic"]); kit.rod((0.08, 0.31, z + 0.075), (0.24, 0.31, z + 0.075), 0.022, P["plastic"])  # desk phone
+    for i in range(3):
+        for j in range(4): kit.box((0.1 + i * 0.04, 0.36 + j * 0.022, z + 0.05), (0.13 + i * 0.04, 0.375 + j * 0.022, z + 0.056), P["plastic_grey"])
+    kit.box((0.2, 0.35, z + 0.05), (0.26, 0.4, z + 0.054), P["screen"])
+    kit.box((-0.45, 0.28, z), (-0.31, 0.44, z + 0.07), P["plastic"]); kit.box((-0.43, 0.27, z + 0.04), (-0.33, 0.28, z + 0.045), P["black"])   # keycard encoder
+    kit.sphere((-0.34, 0.275, z + 0.06), 0.005, P["green_led"], seg=6)
+    for k in range(6): kit.box((-0.25, 0.3, z + k * 0.0012), (-0.165, 0.354, z + 0.0012 + k * 0.0012), P["paper"] if k % 2 else P["brass"])  # cards
+    for k, (x0, rot) in enumerate(((1.5, 0), (1.55, 0.01))):                                             # paper trays + paperwork
+        kit.box((x0, 0.1, z + k * 0.06), (x0 + 0.34, 0.36, z + k * 0.06 + 0.012), P["plastic"]); kit.box((x0 + 0.02, 0.12, z + k * 0.06 + 0.012), (x0 + 0.31, 0.34, z + k * 0.06 + 0.03), P["paper"])
+    kit.box((-1.7, 0.15, z), (-1.48, 0.45, z + 0.004), P["paper"]); kit.box((-1.68, 0.17, z + 0.004), (-1.5, 0.43, z + 0.007), P["paper"])
+    kit.cyl((-0.65, 0.4, z + 0.05), 0.035, 0.1, P["plastic"], seg=12)
+    for k in range(3): kit.rod((-0.66 + k * 0.012, 0.4, z + 0.05), (-0.67 + k * 0.02, 0.39 + k * 0.01, z + 0.16), 0.004, (P["plastic"], P["brass"], P["red_paint"])[k])
+    kit.box((1.9, 0.05, z), (2.08, 0.25, z + 0.1), P["plastic_grey"]); kit.box((1.93, 0.05, z + 0.1), (2.05, 0.08, z + 0.102), P["paper"])   # receipt printer
+    kit.box((1.55, 0.05, 0.0), (1.75, 0.42, 0.45), P["plastic"])                                       # PC tower
+    kit.box((0.75, -0.36, 1.16), (0.85, -0.22, 1.18), P["plastic"]); kit.box((0.76, -0.35, 1.18), (0.84, -0.23, 1.25), P["plastic"])  # card terminal (guest side)
+    kit.box((0.765, -0.351, 1.205), (0.835, -0.345, 1.245), P["screen"])
+    kit.sphere((-1.0, -0.3, 1.19), 0.05, P["brass"], scale=(1, 1, 0.7)); kit.cyl((-1.0, -0.3, 1.165), 0.06, 0.01, P["black"], seg=16)   # bell
+    kit.box((-1.45, -0.42, 1.16), (-1.25, -0.3, 1.3), P["walnut"]); kit.box((-1.43, -0.425, 1.18), (-1.27, -0.42, 1.29), P["paper"])    # brochures
+    kit.done(bevel=0.002, parent=root)
+    return desk
+
+
+def office_chair(name, at, rot_deg, P, c_):
+    """Task chair: five-star base with casters, gas lift, upholstered seat and back."""
+    root = empty(f"CHAIR_{name}", at, c_, (0, 0, math.radians(rot_deg))); mb = MB(f"SM_OfficeChair_{name}", c_)
+    for k in range(5):
+        a = k / 5 * 2 * math.pi; e = Vector((math.cos(a) * 0.3, math.sin(a) * 0.3, 0.07))
+        mb.rod((0, 0, 0.08), e, 0.018, P["plastic"]); mb.sphere(e - Vector((0, 0, 0.035)), 0.03, P["rubber"], seg=8)
+    mb.cyl((0, 0, 0.27), 0.03, 0.38, P["steel"], seg=12)
+    mb.box((-0.25, -0.24, 0.44), (0.25, 0.24, 0.52), P["office_fabric"]); mb.box((-0.22, 0.2, 0.55), (0.22, 0.26, 1.0), P["office_fabric"])
+    mb.rod((0, 0.23, 0.48), (0, 0.24, 0.6), 0.02, P["plastic"])
+    for sx in (-1, 1): mb.box((sx * 0.25 - 0.02, -0.12, 0.6), (sx * 0.25 + 0.02, 0.12, 0.63), P["plastic"]); mb.rod((sx * 0.25, 0.0, 0.52), (sx * 0.25, 0.0, 0.6), 0.012, P["plastic"])
+    mb.done(bevel=0.01, parent=root); return root
+
+
 def sign(body, loc, n, size, P, c_, plate=None, mat="brass", name=None):
     """Lettering facing n; optional backing plate (w, h, material key)."""
     x, y, z = loc
@@ -458,7 +563,7 @@ def grand_aurelia(floors=9, corridor_floors=(4, 9)):
     """Build the whole hotel + street. Returns dict(origin, rooms, routes, anchors, obj, elevators)."""
     P = palette(); H = coll("HOTEL")
     C = {k: coll(f"HOTEL_{k}", H) for k in ("exterior", "street", "lobby", "elevators", "stairs", "floors", "suite", "petstore", "lights")}
-    trimL = dict(base=P["walnut"], rail=P["walnut"], panel=P["walnut"], crown=P["plaster"])
+    trimL = dict(base=P["walnut"], rail=P["walnut"], panel=P["walnut"], crown=P["plaster"], picture=P["plaster"])
     trimC = dict(base=P["walnut"], rail=P["walnut"], crown=P["ceiling"])
 
     # ---- lobby (5 m): entrance south, desk north, stairs door west, elevator opening east
@@ -471,7 +576,17 @@ def grand_aurelia(floors=9, corridor_floors=(4, 9)):
     mb.box((-3.2, -5.5, 4.75), (3.2, 0.5, 5.0), P["ceiling"])                                    # coffer frame around the chandelier
     for x0, x1, y0, y1 in ((-3.2, 3.2, -5.5, -5.3), (-3.2, 3.2, 0.3, 0.5), (-3.2, -3.0, -5.5, 0.5), (3.0, 3.2, -5.5, 0.5)):
         mb.box((x0, y0, 4.62), (x1, y1, 4.75), P["plaster"])
-    mb.done()
+    for x in (-5.6, -4.2, 4.2, 5.6):                                             # recessed downlights (trim ring + lens)
+        for y in (-5.8, -3.6, -1.4, 0.8, 3.0):
+            mb.cyl((x, y, 4.995), 0.085, 0.01, P["steel"], seg=16, smooth=False); mb.cyl((x, y, 4.99), 0.06, 0.012, P["warm_light"], seg=16, smooth=False)
+    for x in (-2.0, 2.0):
+        mb.cyl((x, 3.6, 4.995), 0.085, 0.01, P["steel"], seg=16, smooth=False); mb.cyl((x, 3.6, 4.99), 0.06, 0.012, P["warm_light"], seg=16, smooth=False)
+    for sx in (-1, 1):                                                          # linear slot diffusers (air) along both side walls
+        x = sx * 6.45; mb.box((x - 0.07, -6.2, 4.985), (x + 0.07, 4.2, 5.0), P["steel"])
+        for k in range(28): mb.box((x - 0.055, -6.15 + k * 0.37, 4.98), (x + 0.055, -6.15 + k * 0.37 + 0.3, 4.985), P["black"])
+    for (x, y) in ((-1.5, -6.0), (1.5, -6.0), (-5.0, 2.0), (5.0, 2.0), (0.0, 4.2)):   # sprinklers + smoke detectors
+        mb.cyl((x, y, 4.97), 0.02, 0.06, P["brass"], seg=8); mb.cyl((x + 0.6, y, 4.98), 0.07, 0.04, P["paper"], seg=16)
+    mb.done(bevel=0.006)
     lob = C["lobby"]
     for x in (-4.5, 4.5): column(f"L{x:+.0f}", (x, -1.5, 0), 0.35, 5.0, P, lob)
     sign("THE GRAND AURELIA", (0, 4.97, 3.5), (0, -1), 0.42, P, lob, name="TXT_GrandAurelia_back")
@@ -479,16 +594,8 @@ def grand_aurelia(floors=9, corridor_floors=(4, 9)):
     sign("ELEVATORS", (6.98, 1.3, 3.75), (-1, 0), 0.24, P, lob, plate=(2.6, 0.5, "black"), name="TXT_elevators")
     sign("STAIRS", (-6.98, -0.5, 2.55), (1, 0), 0.14, P, lob, plate=(1.0, 0.28, "black"), name="TXT_stairs")
     sign("EXIT", (-6.97, -0.5, 2.95), (1, 0), 0.1, P, lob, plate=(0.4, 0.18, "black"), mat="exit_green", name="TXT_exit_lobby")
-    # reception desk: walnut fluted front, marble top (1.16 m), brass kick; back counter + key wall
-    root = empty("DESK", (0, 2.0, 0), lob); mb = MB("SM_Desk", lob)
-    mb.box((-2.2, -0.4, 0.0), (2.2, 0.4, 1.12), P["walnut"])
-    for k in range(22): mb.box((-2.15 + k * 0.2, -0.43, 0.1), (-2.05 + k * 0.2, -0.4, 1.06), P["oak"])
-    mb.box((-2.2, -0.44, 0.0), (2.2, -0.4, 0.1), P["brass"])
-    mb.box((-2.3, -0.48, 1.12), (2.3, 0.48, 1.16), P["marble"])
-    mb.box((1.0, 0.1, 1.16), (1.5, 0.14, 1.5), P["black"]); mb.box((1.05, 0.095, 1.2), (1.45, 0.1, 1.46), P["cool_light"])
-    mb.box((1.05, -0.15, 1.16), (1.45, 0.02, 1.18), P["black"]); mb.sphere((-1.0, -0.25, 1.19), 0.05, P["brass"], scale=(1, 1, 0.7))
-    mb.box((-1.6, 0.05, 1.16), (-1.35, 0.25, 1.2), P["black"]); mb.box((-1.75, -0.3, 1.16), (-1.55, -0.18, 1.35), P["walnut"])  # phone, brochures
-    desk = mb.done(bevel=0.01, parent=root)
+    # reception desk: a real counter - guest transaction ledge (1.16 m) over a staff work surface (0.78 m), cabinets
+    root = empty("DESK", (0, 2.0, 0), lob); desk = reception_desk(root, P, lob)
     mb = MB("SM_BackCounter", lob)
     mb.box((-3.2, 3.95, 0), (3.2, 4.6, 0.95), P["walnut"]); mb.box((-3.25, 3.9, 0.95), (3.25, 4.65, 0.99), P["marble_dark"])
     for k in range(8): mb.box((-3.1 + k * 0.8, 3.93, 0.15), (-2.4 + k * 0.8, 3.95, 0.85), P["oak"])
@@ -500,22 +607,24 @@ def grand_aurelia(floors=9, corridor_floors=(4, 9)):
         m2.cyl((x, 2.0, 2.65), 0.17, 0.22, P["brass"], r2=0.07, seg=20); m2.sphere((x, 2.0, 2.55), 0.06, P["warm_light"]); m2.done()
         light(f"LGT_pendant_{x:+.1f}", "POINT", (x, 2.0, 2.5), 70, (1.0, 0.8, 0.55), 0.1, c=lob)
     chandelier("lobby", (0, -2.5, 3.9), P, lob)
-    # seating areas (west + east), rugs, side tables with lamps, art
+    # seating areas (west + east): scanned sofas/chairs (assets.py, CC0/CC-BY), rugs, side tables with lamps, art
+    import assets as AS
     for sx in (-1, 1):
         x = sx * 5.0
         rug(f"seat{sx}", x - 1.4, -5.6, x + 1.4, -2.6, 0.0, P, lob)
-        sofa(f"seat{sx}", (sx * 6.35, -4.1, 0), -sx * math.pi / 2, P, lob, 2.2)            # faces the room
-        for y in (-5.0, -3.2): armchair(f"seat{sx}{y}", (sx * 3.8, y, 0), sx * math.pi / 2, P, lob)  # faces the sofa
+        AS.place("GlamVelvetSofa" if sx < 0 else "SheenWoodLeatherSofa", (sx * 6.3, -4.1, 0), -sx * 90, coll=lob)     # faces the room
+        for y in (-5.0, -3.2): AS.place("ChairDamaskPurplegold" if sx < 0 else "SheenChair", (sx * 3.85, y, 0), sx * 90, coll=lob)
+        AS.place("SpecularSilkPouf", (x + sx * 0.2, -5.3, 0), 0, coll=lob)
         table(f"coffee{sx}", (x, -4.1, 0), P, lob)
         table(f"side{sx}", (sx * 6.35, -5.55, 0), P, lob, 0.45, 0.45, 0.55, lamp=True)
         art(f"lobby{sx}", (sx * 6.99, -4.1, 2.6), (-sx, 0), 2.0, 1.3, P, lob)
         for y in (-5.8, -2.4): sconce(f"lobby{sx}{y}", (sx * 6.99, y, 2.5), (-sx, 0), P, lob)
-    for k, (x, y, s, kd) in enumerate(((-6.3, -6.3, 1.3, "palm"), (6.3, -6.3, 1.3, "palm"), (-6.3, 4.3, 1.2, "palm"), (6.3, 4.3, 1.2, "palm"),
-                                       (-3.0, 1.9, 0.9, "fern"), (3.0, 1.9, 0.9, "fern"), (6.55, -1.15, 1.1, "palm"), (6.55, 3.75, 1.1, "palm"),
-                                       (-2.4, -6.55, 0.9, "fern"), (2.4, -6.55, 0.9, "fern"))):
+    for k, (x, y, h) in enumerate(((-6.3, -6.3, 1.7), (6.3, -6.3, 1.7), (-6.3, 4.3, 1.5), (6.3, 4.3, 1.5), (6.55, -1.15, 1.3), (6.55, 3.75, 1.3))):
+        AS.place("DiffuseTransmissionPlant", (x, y, 0), k * 47, coll=lob, height=h)          # scanned potted plants
+    for k, (x, y, s, kd) in enumerate(((-3.0, 1.9, 0.9, "fern"), (3.0, 1.9, 0.9, "fern"), (-2.4, -6.55, 0.9, "fern"), (2.4, -6.55, 0.9, "fern"))):
         plant(f"lobby{k}", (x, y, 0), P, lob, s, kd, seed=k)
-    light("LGT_lobby_fill", "AREA", (0, -1.0, 4.85), 260, (1.0, 0.9, 0.78), 6.0, aim=(0, -1.0, 0), c=lob)
-    light("LGT_desk_fill", "AREA", (0, 3.3, 4.85), 140, (1.0, 0.88, 0.72), 3.0, aim=(0, 3.3, 0), c=lob)
+    AS.place("GlassVaseFlowers", (-1.75, 1.72, 1.16), 20, coll=lob, height=0.45)            # flowers on the guest ledge
+    office_chair("desk", (-0.75, 2.55, 0), 200, P, lob)
 
     # ---- elevator lobby + cars
     el = C["elevators"]
@@ -556,6 +665,8 @@ def grand_aurelia(floors=9, corridor_floors=(4, 9)):
     wall(mb, "x", sy0, sx0, sx1, 0, FLOOR_H, P["stairpaint"], 1); wall(mb, "x", sy1, sx0, sx1, 0, FLOOR_H, P["stairpaint"], -1)
     wall(mb, "y", sx1, sy0, sy1, 0, FLOOR_H, P["stairpaint"], -1, [(-1.0, 0.0, 2.2)])
     mb.box((-7.52, -1.25, 2.4), (-7.5, -0.95, 2.6), P["exit_green"])
+    mb.box((sx0 + 0.02, 4.7, 0.9), (sx0 + 0.06, 4.95, 1.25), P["steel"]); mb.cyl((sx0 + 0.15, 4.82, 0.6), 0.075, 0.55, P["red_paint"], seg=14)   # fire extinguisher
+    mb.cyl((sx0 + 0.15, 4.82, 0.92), 0.025, 0.08, P["black"], seg=8)
     mb.box((sx0 + 0.02, 4.2, 2.9), (sx0 + 0.04, 4.6, 3.1), P["cool_light"]); mb.box((sx0 + 0.02, -0.6, 2.9), (sx0 + 0.04, -0.2, 3.1), P["cool_light"])
     mb.done()
     for k in range(floors + 1):
@@ -633,7 +744,11 @@ def grand_aurelia(floors=9, corridor_floors=(4, 9)):
             x = X0 + 1.6 + i * (X1 - X0 - 3.2) / 7
             lit = (i * 7 + k * 3) % 5 == 0
             mb.box((x - 0.7, fy - 0.02, z - 0.9), (x + 0.7, fy + 0.12, z + 0.9), P["winlit"] if lit else P["winglass"])
-            mb.box((x - 0.8, fy - 0.1, z - 1.0), (x + 0.8, fy, z - 0.9), P["stone"])
+            mb.box((x - 0.8, fy - 0.1, z - 1.0), (x + 0.8, fy, z - 0.9), P["stone"])                       # sill
+            for (u0, u1, v0, v1) in ((-0.72, 0.72, 0.86, 0.92), (-0.72, 0.72, -0.92, -0.86), (-0.72, -0.66, -0.9, 0.9), (0.66, 0.72, -0.9, 0.9),
+                                     (-0.025, 0.025, -0.88, 0.88), (-0.7, 0.7, 0.25, 0.29)):                  # frame + mullion + transom
+                mb.box((x + u0, fy - 0.035, z + v0), (x + u1, fy - 0.0, z + v1), P["black"])
+            mb.box((x - 0.82, fy - 0.06, z + 0.92), (x + 0.82, fy, z + 1.02), P["stone"])                     # lintel
     mb.box((X0 - 0.3, fy - 0.3, top - 0.6), (X1 + 0.3, Y1 + 0.3, top), P["stone"])  # cornice / roof edge
     for (a, b, xx) in ((Y0, Y1, X0), (Y0, Y1, X1)):                                   # side walls
         mb.box((xx - (0.25 if xx < 0 else 0), a, 0), (xx + (0.25 if xx > 0 else 0), b, top), P["stone"])
@@ -651,6 +766,15 @@ def grand_aurelia(floors=9, corridor_floors=(4, 9)):
     text("THE GRAND AURELIA", (0, -10.27, 4.02), 0.26, P["brass"], ex, rot=facing_rot((0, -1)), name="TXT_GrandAurelia_canopy")
     for x in (-2.4, 2.4): light(f"LGT_canopy{x:+.0f}", "SPOT", (x, -8.8, 3.8), 300, (1.0, 0.82, 0.58), 0.1, aim=(x, -8.8, 0), c=ex)
     for x in (-2.3, 2.3): plant(f"topiary{x:+.0f}", (x, -7.8, 0), P, ex, 1.0, "topiary")
+    m2 = MB("EXT_details", ex)
+    for k, x in enumerate((-2.2, 0.0, 2.2)):                                     # flags on poles above the canopy
+        m2.rod((x, -7.3, 4.6), (x, -9.0, 6.4), 0.03, P["brass"]); m2.box((x - 0.006, -8.95, 5.35), (x + 0.006, -7.9, 6.25), P["flag"])
+    for x in (-1.75, 1.75):                                                     # entrance lanterns
+        m2.box((x - 0.08, -7.3, 2.4), (x + 0.08, -7.25, 2.75), P["black"]); m2.cyl((x, -7.42, 2.6), 0.07, 0.24, P["warm_light"], seg=12)
+        m2.box((x - 0.09, -7.5, 2.46), (x + 0.09, -7.34, 2.48), P["black"]); m2.box((x - 0.09, -7.5, 2.72), (x + 0.09, -7.34, 2.74), P["black"])
+    for x in range(-10, 11, 2):                                                 # kerb bollards (gap at the carpet)
+        if abs(x) > 1: m2.cyl((x, -11.7, 0.45), 0.08, 0.9, P["black"], seg=12); m2.sphere((x, -11.7, 0.92), 0.085, P["black"], scale=(1, 1, 0.5), seg=12)
+    m2.done(bevel=0.004)
     m2 = MB("EXT_bladesign", ex); m2.box((12.9, -7.6, 8.0), (13.15, -6.9, 18.0), P["black"]); m2.done()
     for k, ch in enumerate("AURELIA"): text(ch, (13.16, -7.25, 17.2 - k * 1.3), 0.9, P["warm_light"], ex, rot=facing_rot((1, 0)), name=f"TXT_blade{k}")
 
@@ -833,11 +957,15 @@ def suitcase(name, kind="medium", color=(0.7, 0.1, 0.3), P=None, c=None, parent=
     mb.rod((0.06, 0, z0 + h + 0.012), (0.06, 0, z0 + h + 0.04), 0.008, P["black"]); mb.rod((-0.06, 0, z0 + h + 0.04), (0.06, 0, z0 + h + 0.04), 0.011, P["black"])
     for x in (-0.09, 0.09): mb.box((x - 0.012, d / 2, z0 + h - 0.02), (x + 0.012, d / 2 + 0.02, z0 + h + 0.03), P["steel"])  # telescopic handle (stowed)
     mb.box((-0.1, d / 2, z0 + h + 0.03), (0.1, d / 2 + 0.025, z0 + h + 0.055), P["black"])
+    for zz in (z0 + h * 0.62, z0 + h * 0.58):                                   # zipper pulls on the seam
+        mb.box((w / 2 + 0.004, -0.004, zz), (w / 2 + 0.012, 0.004, zz + 0.035), P["steel"])
+    mb.box((w / 2 + 0.004, -0.05, z0 + h * 0.45), (w / 2 + 0.02, 0.05, z0 + h * 0.48), P["black"])    # side carry handle
+    for k in (0.3, 0.7): mb.box((-w / 2 - 0.002, -d / 2 + 0.01, z0 + h * k), (w / 2 + 0.002, d / 2 - 0.01, z0 + h * k + 0.004), P["black"])  # shell seams
     for sx in (-1, 1):
         for sy in (-1, 1):
             mb.box((sx * (w / 2 - 0.05) - 0.02, sy * (d / 2 - 0.04) - 0.02, z0 - 0.012), (sx * (w / 2 - 0.05) + 0.02, sy * (d / 2 - 0.04) + 0.02, z0), P["black"])
             mb.cyl((sx * (w / 2 - 0.05), sy * (d / 2 - 0.04), 0.028), 0.028, 0.022, P["black"], axis="Y", seg=12)
-    return mb.done(bevel=0.012, parent=parent)
+    return mb.done(bevel=0.03, parent=parent, segments=4)                      # moulded shells: round corners
 
 
 def trolley_wheels(root, P):

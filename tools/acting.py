@@ -115,6 +115,9 @@ POSES = {
     "carry_two":   {"arm*": dict(at="upperleg01.L", off=(0.17, -0.02, 0.0), pole=(1, 0.3, 0), wrist=(0.15, 0.0, -1)), "hand*": "grip"},
     "show_box_R":  {"arm.L": _STAND, "arm.R": dict(at="spine01", off=(-0.04, -0.34, 0.02), pole=(-0.6, 0.4, -1), wrist=(0.25, -0.6, 0.2)),
                     "hand.R": "cup"},
+    "sit_read":    {"aim": {"spine03": (0, 0.12, 1), "upperleg01.L": (0.06, -1, 0.02), "upperleg01.R": (-0.06, -1, 0.02),
+                            "lowerleg01.L": (0.02, -0.08, -1), "lowerleg01.R": (-0.02, -0.08, -1), "head": (0, -0.35, 1)},
+                    "arm*": dict(at="spine01", off=(0.11, -0.3, -0.14), pole=(0.8, 0.2, -1)), "hand*": "grip"},   # seated, holding a magazine
     "pocket_R":    {"arm.L": _STAND, "arm.R": dict(at="upperleg01.R", off=(-0.06, -0.09, -0.02), pole=(-0.6, 1, 0)), "hand.R": "relaxed"},
 }
 # poses not in POSES (project libraries) get hands from their name

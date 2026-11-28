@@ -19,16 +19,22 @@ CAST = {
                 clothes=["elvs_male_shirt_untucked_bd1", "elvs_male_trouser", "mindfront_shoes_oxford_male"],
                 colors={"shirt": "b3cde0", "trouser": "55585e", "oxford": "111111"}),
 }
-SKIN = {"INF": "e8b89a", "CLK": "d9a77e", "F1": "6b4330", "F2": "f0c7aa", "MGR": "e3b294"}
+CAST["GST"] = dict(gender=0, age=0.62, height=0.45, weight=0.55, skin="middleage_caucasian_female", hair="ponytail01",   # background guest
+                  clothes=["punkduck_v_neck_top", "punkduck_female_tight_jeans", "punkduck_tennis_shoes"],
+                  colors={"v_neck": "2f3f6b", "jeans": "c9b79c", "tennis": "f0f0f0"})
+SKIN = {"GST": "e6b9a0", "INF": "e8b89a", "CLK": "d9a77e", "F1": "6b4330", "F2": "f0c7aa", "MGR": "e3b294"}
 
 
 def lin(h):
     return [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
 
 
+STORY = ["INF", "CLK", "F1", "F2", "MGR"]   # the story cast; background extras are built on request
+
+
 def build(names=None):
     rigs = {}
-    for name in names or list(CAST):
+    for name in names or STORY:
         c = dict(CAST[name]); colors = c.pop("colors")
         body, rig = cast.human(name, **c)
         for o in rig.children_recursive:
