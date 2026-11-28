@@ -151,7 +151,7 @@ def palette():
         fabric_white=M("HK_Linen", (0.9, 0.88, 0.84), 0.9, kind="fabric", var=0.03, bump=0.1),
         plastic=M("HK_PlasticDark", (0.06, 0.06, 0.065), 0.45, var=0.03, bump=0.02),
         plastic_grey=M("HK_PlasticGrey", (0.32, 0.32, 0.33), 0.5, var=0.03, bump=0.02),
-        screen=M("HK_Screen", (0.35, 0.55, 0.85), 0.2, emit=1.4, var=0.0, bump=0.0),
+        screen=M("HK_Screen", (0.35, 0.55, 0.85), 0.2, emit=0.6, var=0.0, bump=0.0),
         paper=M("HK_Paper", (0.88, 0.87, 0.83), 0.9, var=0.02, bump=0.05),
         rubber=M("HK_Rubber", (0.04, 0.04, 0.04), 0.85, var=0.02),
         office_fabric=M("HK_OfficeFabric", (0.12, 0.12, 0.14), 0.95, kind="fabric", var=0.06, bump=0.25),
@@ -509,6 +509,9 @@ def reception_desk(root, P, c_):
     for x in (-1.0, 0.95):                                                                            # monitors face the staff side
         kit.box((x - 0.1, 0.12, z), (x + 0.1, 0.27, z + 0.012), P["plastic"]); kit.box((x - 0.02, 0.2, z), (x + 0.02, 0.24, z + 0.22), P["plastic"])
         kit.box((x - 0.28, 0.17, z + 0.16), (x + 0.28, 0.2, z + 0.5), P["plastic"]); kit.box((x - 0.265, 0.2, z + 0.175), (x + 0.265, 0.203, z + 0.485), P["screen"])
+        kit.box((x - 0.265, 0.203, z + 0.445), (x + 0.265, 0.205, z + 0.485), P["black"])               # booking-software UI: header,
+        kit.box((x - 0.265, 0.203, z + 0.175), (x - 0.17, 0.205, z + 0.445), P["plastic_grey"])           # sidebar,
+        for r in range(7): kit.box((x - 0.15, 0.203, z + 0.41 - r * 0.033), (x + 0.24 - (r % 3) * 0.06, 0.205, z + 0.425 - r * 0.033), P["paper"])  # rows
         kit.box((x - 0.22, 0.32, z), (x + 0.22, 0.46, z + 0.02), P["plastic"])                       # keyboard
         for r in range(4): kit.box((x - 0.2, 0.335 + r * 0.03, z + 0.02), (x + 0.2, 0.355 + r * 0.03, z + 0.028), P["plastic_grey"])
         kit.sphere((x + 0.32, 0.4, z + 0.015), 0.03, P["plastic"], scale=(0.75, 1.3, 0.5), seg=10)    # mouse
